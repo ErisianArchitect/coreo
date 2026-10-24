@@ -28,6 +28,10 @@ fn fail() noreturn {
     }
 }
 
+fn orFail(result: anytype) @typeInfo(@TypeOf(result)).error_union.payload {
+    return result catch fail();
+}
+
 pub fn main(init: std.process.Init) !void {
     // _ = init;
     const alloc = init.gpa;
@@ -40,4 +44,25 @@ pub fn main(init: std.process.Init) !void {
     const get_fox = pool.get(fox) catch fail();
     println("{s}", .{get_hello.*});
     println("{s}", .{get_fox.*});
+    qprintln("--------");
+    for (pool.slice()) |it| {
+        println("It: {s}", .{it});
+    }
+    const pop_hello = orFail(pool.pop(hello));
+    println("pop_hello: {s}", .{pop_hello});
+    qprintln("--------");
+    for (pool.slice()) |it| {
+        println("It: {s}", .{it});
+    }
+    const foo = pool.push(alloc, "foo");
+    qprintln("--------");
+    for (pool.slice()) |it| {
+        println("It: {s}", .{it});
+    }
+    _=orFail(pool.pop(foo));
+    qprintln("--------");
+    for (pool.slice()) |it| {
+        println("It: {s}", .{it});
+    }
+    println("Size of ObjectPool: {d}", .{@sizeOf(ObjectPool(void))});
 }
