@@ -6,57 +6,30 @@ const debug = @import("debug");
 
 const Allocator = std.mem.Allocator;
 
-const Vec = @import("dsa").VecUnmanaged;
+const dsa = @import("dsa");
 
-/// Out of memory panic.
-inline fn oom(comptime src: ?std.lang.SourceLocation) noreturn {
-    if (src) |loc| {
-        @panic(std.fmt.comptimePrint("Out of memory: {s}:{d}:{d}", .{loc.file, loc.line, loc.column}));
-    } else {
-        @panic("Out of memory.");
-    }
-}
+const Vec = dsa.VecUnmanaged;
+const GenId = dsa.GenId;
+
+const oom = debug.outOfMemory;
 
 const PrivateToken = opaque {};
 
-pub fn PoolId(comptime Marker: anytype) type {
-    return packed struct(u64) {
-        const _ = .{Marker};
+const Seal = comp.typing.GenericOpaqueSeal(opaque{});
 
-        const Self = @This();
-
-        pub const NULL: Self = .init(0, 0);
-        
-        id: u32,
-        gen: u32,
-
-
-        pub inline fn init(id: u32, gen: u32) Self {
-            return .{.id = id, .gen = gen};
-        }
-
-        pub inline fn first(id: u32) Self {
-            return .{.id = id, .gen = 1};
-        }
-
-        pub inline fn rotGen(self: *Self) void {
-            self.gen +%= 2;
-        }
-
-        pub inline fn withRotGen(self: Self) Self {
-            self.incrGen();
-            return self;
-        }
-    };
+comptime {
+    if (Seal(u32) == Seal(u64)) {
+        @compileError("Seal is broken.");
+    }
 }
 
 pub const ObjectPoolError = error {
     IdMismatch,
 };
 
-pub fn SlicePtr(comptime P: type) type {
+pub fn SlicePtr(comptime T: type) type {
     return extern struct {
-        ptr: [*]P,
+        ptr: [*]T,
         len: usize,
     };
 }
@@ -65,7 +38,7 @@ pub fn ObjectPoolUnmanaged(comptime T: type) type {
     return extern struct {
         const Self = @This();
 
-        pub const Id = PoolId(.{T, ObjectPoolUnmanaged, PrivateToken});
+        pub const Id = GenId(Seal(T));
 
         pool: SlicePtr(T),
         pool_ids: [*]Id,
@@ -106,10 +79,10 @@ pub fn ObjectPoolUnmanaged(comptime T: type) type {
         }
 
         pub fn initCapacity(alloc: Allocator, capacity: usize) Self {
-            const pool_ptr       = (alloc.alloc(T,   capacity) catch oom(@src())).ptr;
-            const pool_index_ptr = (alloc.alloc(Id,  capacity) catch oom(@src())).ptr;
-            const index_ptr      = (alloc.alloc(u32, capacity) catch oom(@src())).ptr;
-            const free_ptr       = (alloc.alloc(Id,  capacity) catch oom(@src())).ptr;
+            const pool_ptr       = (alloc.alloc(T,   capacity) catch oom(.{.src=@src()})).ptr;
+            const pool_index_ptr = (alloc.alloc(Id,  capacity) catch oom(.{.src=@src()})).ptr;
+            const index_ptr      = (alloc.alloc(u32, capacity) catch oom(.{.src=@src()})).ptr;
+            const free_ptr       = (alloc.alloc(Id,  capacity) catch oom(.{.src=@src()})).ptr;
             return .{
                 .pool_ids = pool_index_ptr,
                 .pool       = .{.ptr = pool_ptr,       .len = 0},
@@ -142,10 +115,10 @@ pub fn ObjectPoolUnmanaged(comptime T: type) type {
         pub fn ensureCapacity(self: *Self, alloc: Allocator, capacity: usize) void {
             if (self.cap >= capacity) return;
             const new_cap = std.math.ceilPowerOfTwo(usize, @max(capacity, 4)) catch @panic("Capacity was too large.");
-            self.pool.ptr       = (alloc.realloc(self.capPoolSliceMut(),      new_cap) catch oom(@src())).ptr;
-            self.pool_ids       = (alloc.realloc(self.capPoolIndexSliceMut(), new_cap) catch oom(@src())).ptr;
-            self.index.ptr      = (alloc.realloc(self.capIndexSliceMut(),     new_cap) catch oom(@src())).ptr;
-            self.free.ptr       = (alloc.realloc(self.capFreeSliceMut(),      new_cap) catch oom(@src())).ptr;
+            self.pool.ptr       = (alloc.realloc(self.capPoolSliceMut(),      new_cap) catch oom(.{.src=@src()})).ptr;
+            self.pool_ids       = (alloc.realloc(self.capPoolIndexSliceMut(), new_cap) catch oom(.{.src=@src()})).ptr;
+            self.index.ptr      = (alloc.realloc(self.capIndexSliceMut(),     new_cap) catch oom(.{.src=@src()})).ptr;
+            self.free.ptr       = (alloc.realloc(self.capFreeSliceMut(),      new_cap) catch oom(.{.src=@src()})).ptr;
             self.cap = new_cap;
         }
 
@@ -166,30 +139,32 @@ pub fn ObjectPoolUnmanaged(comptime T: type) type {
             self.index.len += 1;
             // generation increases by 2, start at index 1, if it rolls around, it ends up back at 1 instead of 0.
             // This maintains that 0 is reserved for null.
-            return Id.first(id_ind);
+            return Id.initFirstGen(id_ind);
         }
 
         fn allocate(self: *Self, alloc: Allocator) Id {
             if (self.popId()) |id| {
-                return id;
+                return id.rotate();
             } else {
                 self.reserve(alloc, 1);
                 return self.pushId();
             }
         }
 
-        fn swapRemove(self: *Self, index: usize) struct{ T, ?Id } {
+        fn swapRemove(self: *Self, index: u32) T {
             const result = self.pool.ptr[index];
             const end = self.pool.len - 1;
-            if (end == self.pool.len) {
+            if (index == end) {
                 self.pool.len -= 1;
-                return .{result, null};
+                self.pool_ids[index] = .NULL;
+                return result;
             } else {
                 self.pool.len -= 1;
                 self.pool.ptr[index] = self.pool.ptr[end];
                 const end_id = self.pool_ids[end];
                 self.pool_ids[index] = end_id;
-                return .{result, end_id};
+                self.index.ptr[end_id.id] = index;
+                return result;
             }
         }
 
@@ -221,13 +196,9 @@ pub fn ObjectPoolUnmanaged(comptime T: type) type {
             const pool_index = self.index.ptr[id.id];
             const pool_id = self.pool_ids[pool_index];
             if (pool_id != id) return ObjectPoolError.IdMismatch;
-            const result, const swapped = self.swapRemove(pool_index);
-            if (swapped) |swap_id| {
-                self.index.ptr[swap_id.id] = pool_index;
-            }
             self.free.ptr[self.free.len] = id;
             self.free.len += 1;
-            return result;
+            return self.swapRemove(pool_index);
         }
     };
 }

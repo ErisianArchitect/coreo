@@ -32,8 +32,9 @@ fn orFail(result: anytype) @typeInfo(@TypeOf(result)).error_union.payload {
     return result catch fail();
 }
 
+const testFailure = debug.failure("Test Failure");
+
 pub fn main(init: std.process.Init) !void {
-    // _ = init;
     const alloc = init.gpa;
     var pool = ObjectPool([]const u8).init(alloc);
     defer pool.deinit(alloc);
@@ -60,6 +61,16 @@ pub fn main(init: std.process.Init) !void {
         println("It: {s}", .{it});
     }
     _=orFail(pool.pop(foo));
+    qprintln("--------");
+    for (pool.slice()) |it| {
+        println("It: {s}", .{it});
+    }
+    const bar = pool.push(alloc, "bar");
+    qprintln("--------bar");
+    for (pool.slice()) |it| {
+        println("It: {s}", .{it});
+    }
+    _=orFail(pool.pop(bar));
     qprintln("--------");
     for (pool.slice()) |it| {
         println("It: {s}", .{it});

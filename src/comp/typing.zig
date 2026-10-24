@@ -64,3 +64,16 @@ pub fn Unique(comptime tag: anytype) type {
         const _ = tag;
     };
 }
+
+pub fn GenericOpaqueSeal(comptime outer_tag: anytype)
+fn(comptime tag: anytype) type {
+    return struct {
+        const OUTER_TAG = outer_tag;
+
+        pub fn Inner(comptime tag: anytype) type {
+            return opaque {
+                const INNER_TAG = .{tag, OUTER_TAG};
+            };
+        }
+    }.Inner;
+}
