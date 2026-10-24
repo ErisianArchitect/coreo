@@ -26,5 +26,11 @@ pub fn GenId(comptime tag: anytype) type {
             new.gen +%= 2;
             return self;
         }
+
+        comptime {
+            if (@alignOf(Self) != 8) {
+                @compileError("GenId is not 8 byte aligned.");
+            }
+        }
     };
 }

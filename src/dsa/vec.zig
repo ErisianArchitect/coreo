@@ -1,25 +1,14 @@
 
 const std = @import("std");
-
 const builtin = @import("builtin");
 
-fn isSafeBuild() bool {
-    return switch (builtin.mode) {
-        .debug => true,
-        .safe => true,
-        else => false,
-    };
-}
+const comp = @import("comp");
+const dsa = @import("dsa");
+const debug = @import("debug");
 
-const SAFE_BUILD = isSafeBuild();
+const StackVec = dsa.StackVec;
 
-inline fn safeAssert(condition: bool, comptime msg: ?[]const u8) void {
-    if (SAFE_BUILD) {
-        if (!condition) {
-            @panic(msg orelse "Assertion failed.");
-        }
-    }
-}
+const safeAssert = debug.assert.safeAssert;
 
 const Allocator = std.mem.Allocator;
 
@@ -95,10 +84,23 @@ pub fn VecUnmanaged(comptime T: type) type {
             self.ensureCapacity(alloc, self.len + count);
         }
 
-        pub fn pop(self: *Self) ?T {
-            if (self.len == 0) return null;
+        pub fn popOut(self: *Self, out: *T) bool {
+            if (self.len == 0) return false;
             self.len -= 1;
-            return self.ptr[self.len];
+            out.* = self.ptr[self.len];
+            return true;
+        }
+
+        pub fn pop(self: *Self) ?T {
+            var out: T = undefined;
+            if (self.popOut(&out)) return out;
+            return null;
+        }
+
+        pub fn popMany(self: *Self, out: []T) bool {
+            if (out.len > self.len) return false;
+            @memcpy(out, self.ptr[self.len - out.len..self.len]);
+            self.len -= out.len;
         }
 
         pub fn push(self: *Self, alloc: Allocator, value: T) void {
@@ -107,21 +109,38 @@ pub fn VecUnmanaged(comptime T: type) type {
             self.len += 1;
         }
 
+        pub fn pushMut(self: *Self, alloc: Allocator, value: T) *T {
+            const index = self.len;
+            self.push(alloc, value);
+            return &self.ptr[index];
+        }
+
         pub fn pushMany(
             self: *Self,
             alloc: Allocator,
             many: []const T,
         ) void {
+            if (many.len == 0) return;
             self.reserve(alloc, many.len);
             @memcpy(self.ptr[self.len..][0..many.len], many);
             self.len += many.len;
         }
 
+        pub fn pushManyMut(
+            self: *Self,
+            alloc: Allocator,
+            many: []const T,
+        ) []T {
+            const index = self.len;
+            self.pushMany(alloc, many);
+            return self.ptr[index..self.len];
+        }
+
         pub fn pushManyWith(
             self: *Self,
             alloc: Allocator,
-            ctx: anytype,
             count: usize,
+            ctx: anytype,
             map: fn(ctx: @TypeOf(ctx), index: usize) T,
         ) void {
             if (count == 0) return;
@@ -130,6 +149,18 @@ pub fn VecUnmanaged(comptime T: type) type {
                 it.* = map(ctx, i);
             }
             self.len += count;
+        }
+
+        pub fn pushManyWithMut(
+            self: *Self,
+            alloc: Allocator,
+            count: usize,
+            ctx: anytype,
+            map: fn(ctx: @TypeOf(ctx), index: usize) T,
+        ) []T {
+            const index = self.len;
+            self.pushManyWith(alloc, ctx, count, map);
+            return self.ptr[index..self.len];
         }
 
         pub fn insertUnchecked(
@@ -146,9 +177,34 @@ pub fn VecUnmanaged(comptime T: type) type {
             self.len += 1;
         }
 
-        pub fn insert(self: *Self, alloc: Allocator, index: usize, value: T) void {
-            safeAssert(index <= self.len, "Index out of bounds.");
+        pub fn insert(
+            self: *Self,
+            alloc: Allocator,
+            index: usize,
+            value: T,
+        ) void {
+            safeAssert(index <= self.len, .{.src = @src(), .msg = "Index out of bounds."});
             self.insertUnchecked(alloc, index, value);
+        }
+
+        pub fn insertMutUnchecked(
+            self: *Self,
+            alloc: Allocator,
+            index: usize,
+            value: T,
+        ) *T {
+            self.insertUnchecked(alloc, index, value);
+            return &self.ptr[index];
+        }
+
+        pub fn insertMut(
+            self: *Self,
+            alloc: Allocator,
+            index: usize,
+            value: T,
+        ) *T {
+            self.insert(alloc, index, value);
+            return &self.ptr[index];
         }
 
         pub fn insertManyUnchecked(
@@ -172,9 +228,29 @@ pub fn VecUnmanaged(comptime T: type) type {
             index: usize,
             many: []const T,
         ) void {
-            safeAssert(index <= self.len, "Index out of bounds.");
+            safeAssert(index <= self.len, .{.src = @src(), .msg = "Index out of bounds."});
             if (many.len == 0) return;
             self.insertManyUnchecked(alloc, index, many);
+        }
+
+        pub fn insertManyMutUnchecked(
+            self: *Self,
+            alloc: Allocator,
+            index: usize,
+            many: []const T,
+        ) []T {
+            self.insertManyUnchecked(alloc, index, many);
+            return self.ptr[index..][0..many.len];
+        }
+
+        pub fn insertManyMut(
+            self: *Self,
+            alloc: Allocator,
+            index: usize,
+            many: []const T,
+        ) []T {
+            self.insertMany(alloc, index, many);
+            return self.ptr[index..][0..many.len];
         }
 
         pub fn insertManyWithUnchecked(
@@ -193,8 +269,8 @@ pub fn VecUnmanaged(comptime T: type) type {
                 const move_dest = self.ptr[end..][0..move_len];
                 @memmove(move_dest, move_src);
             }
-            for (self.ptr[start..end], start..) |*it, i| {
-                it.* = map(ctx, i);
+            for (start..end) |i| {
+                self.ptr[i] = map(ctx, i);
             }
             self.len += insert_count;
         }
@@ -207,22 +283,56 @@ pub fn VecUnmanaged(comptime T: type) type {
             ctx: anytype,
             map: fn(ctx: @TypeOf(ctx), index: usize) T,
         ) void {
-            safeAssert(start <= self.len, "Start out of bounds.");
-            safeAssert(start <= end, "Start is greater than end.");
+            safeAssert(start <= self.len, .{.src = @src(), .msg = "Start out of bounds."});
+            safeAssert(start <= end, .{.src = @src(), .msg = "Start is greater than end."});
             self.insertManyWithUnchecked(alloc, start, end, ctx, map);
         }
 
-        pub fn removeUnchecked(self: *Self, index: usize) T {
-            const result = self.ptr[index];
+        pub fn insertManyWithMutUnchecked(
+            self: *Self,
+            alloc: Allocator,
+            start: usize,
+            end: usize,
+            ctx: anytype,
+            map: fn(ctx: @TypeOf(ctx), index: usize) T,
+        ) []T {
+            self.insertManyWithUnchecked(alloc, start, end, ctx, map);
+            return self.ptr[start..end];
+        }
+
+        pub fn insertManyWithMut(
+            self: *Self,
+            alloc: Allocator,
+            start: usize,
+            end: usize,
+            ctx: anytype,
+            map: fn(ctx: @TypeOf(ctx), index: usize) T,
+        ) []T {
+            self.insertManyWith(alloc, start, end, ctx, map);
+            return self.ptr[start..end];
+        }
+
+        pub fn removeOutUnchecked(self: *Self, index: usize, out: *T) void {
+            out.* = self.ptr[index];
             if (index + 1 != self.len) {
-                @memmove(self.ptr[index..self.len - 1], self.ptr[index+1..self.len]);
+                @memmove(self.ptr[index..self.len-1], self.ptr[index+1..self.len]);
             }
             self.len -= 1;
+        }
+
+        pub fn removeOut(self: *Self, index: usize, out: *T) void {
+            safeAssert(index < self.len, .{.src = @src(), .msg = "Index out of bounds."});
+            self.removeOutUnchecked(index, out);
+        }
+
+        pub fn removeUnchecked(self: *Self, index: usize) T {
+            var result: T = undefined;
+            self.removeOutUnchecked(index, &result);
             return result;
         }
 
         pub fn remove(self: *Self, index: usize) T {
-            safeAssert(index < self.len, "Index out of bounds.");
+            safeAssert(index < self.len, .{.src = @src(), .msg = "Index out of bounds."});
             return self.removeUnchecked(index);
         }
 
@@ -237,7 +347,7 @@ pub fn VecUnmanaged(comptime T: type) type {
         }
 
         pub fn swapRemove(self: *Self, index: usize) T {
-            safeAssert(index < self.len, "Index out of bounds.");
+            safeAssert(index < self.len, .{.src = @src(), .msg = "Index out of bounds."});
             return self.swapRemoveUnchecked(index);
         }
 
@@ -259,7 +369,7 @@ pub fn VecUnmanaged(comptime T: type) type {
         }
 
         pub fn swapRemoveMany(self: *Self, index: usize, out: []T) void {
-            safeAssert(index + out.len <= self.len, "Out of bounds.");
+            safeAssert(index + out.len <= self.len, .{.src = @src(), .msg = "Out of bounds."});
             if (out.len == 0) return;
             self.swapRemoveManyUnchecked(index, out);
         }
@@ -269,8 +379,8 @@ pub fn VecUnmanaged(comptime T: type) type {
         }
 
         pub fn swap(self: *Self, a: usize, b: usize) void {
-            safeAssert(a < self.len, "Index `a` out of bounds.");
-            safeAssert(b < self.len, "Index `b` out of bounds.");
+            safeAssert(a < self.len, .{.src = @src(), .msg = "Index `a` out of bounds."});
+            safeAssert(b < self.len, .{.src = @src(), .msg = "Index `b` out of bounds."});
             if(a == b) return;
             self.swapUnchecked(a, b);
         }
@@ -293,7 +403,7 @@ pub fn VecUnmanaged(comptime T: type) type {
             index: usize,
             out: []T,
         ) void {
-            safeAssert(index + out.len <= self.len, "Out of bounds.");
+            safeAssert(index + out.len <= self.len, .{.src = @src(), .msg = "Out of bounds."});
             self.removeManyUnchecked(index, out);
         }
 
@@ -322,18 +432,28 @@ pub fn VecUnmanaged(comptime T: type) type {
             src_start: usize,
             src_end: usize,
         ) void {
-            safeAssert(dest_index <= self.len, "Destination index out of bounds");
-            safeAssert(src_end <= src.len, "End index out of bounds.");
-            safeAssert(src_start <= src_end, "Start greater than end.");
+            safeAssert(dest_index <= self.len, .{.src = @src(), .msg = "Destination index out of bounds"});
+            safeAssert(src_end <= src.len, .{.src = @src(), .msg = "End index out of bounds."});
+            safeAssert(src_start <= src_end, .{.src = @src(), .msg = "Start greater than end."});
             self.transferFromUnchecked(alloc, dest_index, src, src_start, src_end);
         }
 
-        pub fn drainUnchecked(
+        pub fn append(
+            self: *Self,
+            alloc: Allocator,
+            src: *Self,
+        ) void {
+            self.reserve(alloc, src.len);
+            @memcpy(self.ptr[self.len..][0..src.len], src.ptr[0..src.len]);
+            src.clear();
+        }
+
+        pub fn extractIfUnchecked(
             self: *Self,
             ctx: anytype,
             start: usize,
             end: usize,
-            takeItem: fn(ctx: @TypeOf(ctx), index: usize, item: T) bool,
+            extract: fn(ctx: @TypeOf(ctx), index: usize, item: *T) bool,
         ) void {
             var read_head: usize = start;
             var write_head: usize = start;
@@ -343,8 +463,8 @@ pub fn VecUnmanaged(comptime T: type) type {
             };
             loop: switch (Branch.Sync) {
                 .Sync => while (read_head < end) {
-                    const item = self.ptr[read_head];
-                    if (takeItem(ctx, read_head, item)) {
+                    const item = &self.ptr[read_head];
+                    if (extract(ctx, read_head, item)) {
                         read_head += 1;
                         continue :loop .Async;
                     } else {
@@ -354,8 +474,8 @@ pub fn VecUnmanaged(comptime T: type) type {
                 },
                 .Async => {
                     while (read_head < end) {
-                        const item = self.ptr[read_head];
-                        if (!takeItem(ctx, read_head, item)) {
+                        const item = &self.ptr[read_head];
+                        if (!extract(ctx, read_head, item)) {
                             self.ptr[write_head] = self.ptr[read_head];
                             write_head += 1;
                         }
@@ -374,16 +494,16 @@ pub fn VecUnmanaged(comptime T: type) type {
             }
         }
 
-        pub fn drain(
+        pub fn extractIf(
             self: *Self,
             ctx: anytype,
             start: usize,
             end: usize,
-            takeItem: fn(ctx: @TypeOf(ctx), index: usize, item: T) bool,
+            extract: fn(ctx: @TypeOf(ctx), index: usize, item: *T) bool,
         ) void {
-            safeAssert(end <= self.len, "End out of bounds.");
-            safeAssert(start <= end, "Start is greater than end.");
-            self.drainUnchecked(ctx, start, end, takeItem);
+            safeAssert(end <= self.len, .{.src = @src(), .msg = "End out of bounds."});
+            safeAssert(start <= end, .{.src = @src(), .msg = "Start is greater than end."});
+            self.extractIfUnchecked(ctx, start, end, extract);
         }
 
         pub fn contains(self: Self, item: T) bool {
@@ -391,6 +511,14 @@ pub fn VecUnmanaged(comptime T: type) type {
                 if(std.meta.eql(item, it)) return true;
             }
             return false;
+        }
+
+        pub fn sort(self: *Self, ctx: anytype, lessThanFn: fn(ctx: @TypeOf(ctx), lhs: T, rhs: T) bool) void {
+            std.sort.heap(T, self.sliceMut(), ctx, lessThanFn);
+        }
+
+        pub inline fn isEmpty(self: Self) bool {
+            return self.len == 0;
         }
 
         pub inline fn clear(self: *Self) void {
@@ -406,8 +534,8 @@ pub fn VecUnmanaged(comptime T: type) type {
         }
 
         pub fn clearRange(self: *Self, start: usize, end: usize) void {
-            safeAssert(end <= self.len, "End out of bounds.");
-            safeAssert(start <= end, "Start is greater than end.");
+            safeAssert(end <= self.len, .{.src = @src(), .msg = "End out of bounds."});
+            safeAssert(start <= end, .{.src = @src(), .msg = "Start is greater than end."});
             self.clearRangeUnchecked(start, end);
         }
     };
@@ -487,12 +615,24 @@ pub fn VecManaged(comptime T: type) type {
             self.inner.reserve(self.alloc, count);
         }
 
+        pub fn popOut(self: *Self, out: *T) bool {
+            return self.inner.popOut(out);
+        }
+
         pub fn pop(self: *Self) ?T {
-            self.inner.pop();
+            return self.inner.pop();
+        }
+
+        pub fn popMany(self: *Self, out: []T) bool {
+            return self.inner.popMany(out);
         }
 
         pub fn push(self: *Self, value: T) void {
             self.inner.push(self.alloc, value);
+        }
+
+        pub fn pushMut(self: *Self, value: T) *T {
+            self.inner.pushMut(self.alloc, value);
         }
 
         pub fn pushMany(
@@ -502,13 +642,29 @@ pub fn VecManaged(comptime T: type) type {
             self.inner.pushMany(self.alloc, many);
         }
 
+        pub fn pushManyMut(
+            self: *Self,
+            many: []const T,
+        ) []T {
+            return self.inner.pushManyMut(self.alloc, many);
+        }
+
         pub fn pushManyWith(
             self: *Self,
-            ctx: anytype,
             count: usize,
+            ctx: anytype,
             map: fn(ctx: @TypeOf(ctx), index: usize) T,
         ) void {
-            self.inner.pushManyWith(self.alloc, ctx, count, map);
+            self.inner.pushManyWith(self.alloc, count, ctx, map);
+        }
+
+        pub fn pushManyWithMut(
+            self: *Self,
+            count: usize,
+            ctx: anytype,
+            map: fn(ctx: @TypeOf(ctx), index: usize) T,
+        ) []T {
+            return self.inner.pushManyWithMut(self.alloc, count, ctx, map);
         }
 
         pub fn insertUnchecked(
@@ -527,6 +683,22 @@ pub fn VecManaged(comptime T: type) type {
             self.inner.insert(self.alloc, index, value);
         }
 
+        pub fn insertMutUnchecked(
+            self: *Self,
+            index: usize,
+            value: T,
+        ) *T {
+            return self.inner.insertMutUnchecked(self.alloc, index, value);
+        }
+
+        pub fn insertMut(
+            self: *Self,
+            index: usize,
+            value: T
+        ) *T {
+            self.inner.insertMut(self.alloc, index, value);
+        }
+
         pub fn insertManyUnchecked(
             self: *Self,
             index: usize,
@@ -541,6 +713,22 @@ pub fn VecManaged(comptime T: type) type {
             many: []const T,
         ) void {
             self.inner.insertMany(self.alloc, index, many);
+        }
+
+        pub fn insertManyMutUnchecked(
+            self: *Self,
+            index: usize,
+            many: []const T,
+        ) []T {
+            return self.inner.insertManyMutUnchecked(self.alloc, index, many);
+        }
+
+        pub fn insertManyMut(
+            self: *Self,
+            index: usize,
+            many: []const T,
+        ) []T {
+            return self.inner.insertManyMut(self.alloc, index, many);
         }
 
         pub fn insertManyWithUnchecked(
@@ -561,6 +749,34 @@ pub fn VecManaged(comptime T: type) type {
             map: fn(ctx: @TypeOf(ctx), index: usize) T,
         ) void {
             self.inner.insertManyWith(self.alloc, start, end, ctx, map);
+        }
+
+        pub fn insertManyWithMutUnchecked(
+            self: *Self,
+            start: usize,
+            end: usize,
+            ctx: anytype,
+            map: fn(ctx: @TypeOf(ctx), index: usize) T,
+        ) []T {
+            return self.inner.insertManyWithMutUnchecked(self.alloc, start, end, ctx, map);
+        }
+
+        pub fn insertManyWithMut(
+            self: *Self,
+            start: usize,
+            end: usize,
+            ctx: anytype,
+            map: fn(ctx: @TypeOf(ctx), index: usize) T,
+        ) []T {
+            return self.inner.insertManyWithMut(self.alloc, start, end, ctx, map);
+        }
+
+        pub fn removeOutUnchecked(self: *Self, index: usize, out: *T) void {
+            self.inner.removeOutUnchecked(index, out);
+        }
+
+        pub fn removeOut(self: *Self, index: usize, out: *T) void {
+            self.inner.removeOut(index, out);
         }
 
         pub fn removeUnchecked(self: *Self, index: usize) T {
@@ -651,28 +867,44 @@ pub fn VecManaged(comptime T: type) type {
             );
         }
 
-        pub fn drainUnchecked(
+        pub fn append(
             self: *Self,
-            ctx: anytype,
-            start: usize,
-            end: usize,
-            takeItem: fn(ctx: @TypeOf(ctx), index: usize, item: T) bool,
+            alloc: Allocator,
+            src: *VecUnmanaged(T),
         ) void {
-            self.inner.drainUnchecked(ctx, start, end, takeItem);
+            self.inner.append(alloc, src);
         }
 
-        pub fn drain(
+        pub fn extractIfUnchecked(
             self: *Self,
             ctx: anytype,
             start: usize,
             end: usize,
-            takeItem: fn(ctx: @TypeOf(ctx), index: usize, item: T) bool,
+            extract: fn(ctx: @TypeOf(ctx), index: usize, item: *T) bool,
         ) void {
-            self.inner.drain(ctx, start, end, takeItem);
+            self.inner.extractIfUnchecked(ctx, start, end, extract);
+        }
+
+        pub fn extractIf(
+            self: *Self,
+            ctx: anytype,
+            start: usize,
+            end: usize,
+            extract: fn(ctx: @TypeOf(ctx), index: usize, item: *T) bool,
+        ) void {
+            self.inner.extractIf(ctx, start, end, extract);
         }
 
         pub fn contains(self: Self, item: T) bool {
             return self.inner.contains(item);
+        }
+
+        pub fn sort(self: *Self, ctx: anytype, lessThanFn: fn(ctx: @TypeOf(ctx), T, T) bool) void {
+            self.inner.sort(ctx, lessThanFn);
+        }
+
+        pub inline fn isEmpty(self: Self) bool {
+            return self.inner.isEmpty();
         }
 
         pub fn clear(self: *Self) void {
@@ -699,11 +931,19 @@ pub fn VecManaged(comptime T: type) type {
 
 comptime {
     const vec_decls = std.meta.declarations(VecUnmanaged(void));
+    var missing = StackVec([]const u8, vec_decls.len).init();
     for (vec_decls) |name| {
         const decl = @field(VecUnmanaged(void), name);
         const decl_type = @TypeOf(decl);
-        if (@typeInfo(decl_type) == .@"fn") {
-            if (!@hasDecl(VecManaged(void), name)) @compileError("Missing function in VecManaged: " ++ name);
+        if (@typeInfo(decl_type) == .@"fn" and !@hasDecl(VecManaged(void), name)) {
+            // if (!@hasDecl(VecManaged(void), name)) @compileError("Missing function in VecManaged: " ++ name);
+            missing.push(name);
         }
+    }
+    if (missing.len > 0) {
+        var missing_names: [missing.len][]const u8 = undefined;
+        @memcpy(&missing_names, missing.items[0..missing.len]);
+        const missing_names_list = comp.joinSlices(.immut, u8, "\n", comp.internArray(.immut, []const u8, missing_names));
+        @compileError(std.fmt.comptimePrint("Missing functions in VecManaged:\n{s}", .{missing_names_list}));
     }
 }

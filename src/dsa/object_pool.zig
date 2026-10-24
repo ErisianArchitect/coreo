@@ -11,7 +11,7 @@ const dsa = @import("dsa");
 const Vec = dsa.VecUnmanaged;
 const GenId = dsa.GenId;
 
-const oom = debug.outOfMemory;
+const oom = debug.assert.outOfMemory;
 
 const PrivateToken = opaque {};
 
@@ -168,18 +168,40 @@ pub fn ObjectPoolUnmanaged(comptime T: type) type {
             }
         }
 
-        pub fn get(self: *const Self, id: Id) ObjectPoolError!*const T {
+        inline fn getInternal(self: anytype, id: Id) switch (@TypeOf(self)) {
+            Self => ObjectPoolError!T,
+            *Self => ObjectPoolError!*T,
+            *const Self => ObjectPoolError!*const T,
+            else => @compileError("Must be Self, *Self or *const Self"),
+        } {
             const pool_index = self.index.ptr[id.id];
             const pool_id = self.pool_ids[pool_index];
             if (pool_id != id) return ObjectPoolError.IdMismatch;
-            return &self.pool.ptr[pool_index];
+            return switch (comptime @TypeOf(self)) {
+                Self => self.pool.ptr[pool_index],
+                *Self, *const Self => &self.pool.ptr[pool_index],
+                else => @compileError("Must be Self, *Self, or *const Self."),
+            };
+        }
+
+        pub fn get(self: Self, id: Id) ObjectPoolError!T {
+            return getInternal(self, id);
+        }
+
+        pub fn getRef(self: *const Self, id: Id) ObjectPoolError!*const T {
+            // const pool_index = self.index.ptr[id.id];
+            // const pool_id = self.pool_ids[pool_index];
+            // if (pool_id != id) return ObjectPoolError.IdMismatch;
+            // return &self.pool.ptr[pool_index];
+            return self.getInternal(id);
         }
 
         pub fn getMut(self: *Self, id: Id) ObjectPoolError!*T {
-            const pool_index = self.index.ptr[id.id];
-            const pool_id = self.pool_ids[pool_index];
-            if (pool_id != id) return ObjectPoolError.IdMismatch;
-            return &self.pool.ptr[pool_index];
+            // const pool_index = self.index.ptr[id.id];
+            // const pool_id = self.pool_ids[pool_index];
+            // if (pool_id != id) return ObjectPoolError.IdMismatch;
+            // return &self.pool.ptr[pool_index];
+            return self.getInternal(id);
         }
 
         pub fn push(self: *Self, alloc: Allocator, value: T) Id {
