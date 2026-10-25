@@ -61,8 +61,27 @@ pub fn isAutoLayout(comptime T: type) bool {
 
 pub fn Unique(comptime tag: anytype) type {
     return struct {
-        const _ = tag;
-    };
+        const TYPE = opaque {
+            const _TAG = tag;
+        };
+        pub fn @"$T"(comptime _tag: anytype) type {
+            return struct {
+                const _TAG = _tag;
+            };
+        }
+    }.@"$T"(tag);
+}
+
+const UNIQUE_NAME_PREFIX_WIDTH: usize = blk: {
+    const sample_name = @typeName(Unique(null));
+    for (sample_name, 0..) |c, i| {
+        if (c >= '0' and c <= '9') break :blk i;
+    }
+    break :blk 0;
+};
+
+pub inline fn uniqueName(comptime tag: anytype) []const u8 {
+    return comptime @typeName(Unique(tag))[UNIQUE_NAME_PREFIX_WIDTH..];
 }
 
 pub fn GenericOpaqueSeal(comptime outer_tag: anytype)
@@ -77,3 +96,4 @@ fn(comptime tag: anytype) type {
         }
     }.Inner;
 }
+

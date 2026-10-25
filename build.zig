@@ -34,11 +34,18 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const ffi_mod = b.createModule(.{
+        .root_source_file = b.path("src/ffi/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const imports: []const Import = &.{
         imp(.coreo, coreo_mod),
         imp(.dsa, dsa_mod),
         imp(.comp, comp_mod),
         imp(.debug, debug_mod),
+        imp(.ffi, ffi_mod),
     };
 
     connectModules(imports);

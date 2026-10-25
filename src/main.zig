@@ -36,6 +36,34 @@ fn orFail(result: anytype) @typeInfo(@TypeOf(result)).error_union.payload {
 
 const testFailure = debug.assert.failure("Test Failure");
 
+fn Uni(comptime tag: anytype) type {
+    return struct {
+        const TAG = tag;
+    };
+}
+
+fn uniName(comptime tag: anytype) []const u8 {
+    // main.Uni__struct_
+    const type_name = comptime @typeName(Uni(tag));
+    return comptime type_name;
+}
+
 pub fn main(init: std.process.Init) !void {
     _=init;
+    println("{s}", .{@typeName(Uni(.{"foo"}))});
+    println("{s}", .{@typeName(Uni(.{"bar"}))});
+    println("{s}", .{@typeName(Uni(u64))});
+    qprintln(uniName(u16));
+    qprintln(uniName(u32));
+    qprintln(uniName(u64));
+    // typing.Unique__struct_
+    qprintln(@typeName(comp.typing.Unique(u16)));
+    qprintln(@typeName(comp.typing.Unique(u32)));
+    qprintln(@typeName(comp.typing.Unique(u64)));
+    qprintln(comp.typing.uniqueName(u16));
+    qprintln(comp.typing.uniqueName(u32));
+    qprintln(comp.typing.uniqueName(u64));
+    qprintln(comp.typing.uniqueName(.{"foo"}));
+    qprintln(comp.typing.uniqueName(.{"bar"}));
+    qprintln(comp.typing.uniqueName(.{"baz"}));
 }

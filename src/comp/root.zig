@@ -198,10 +198,11 @@ pub fn dedup(comptime T: type, comptime arr: anytype) [uniqueCount(arr)]T {
 }
 
 pub inline fn typeHash(comptime T: type) u64 {
+    // It doesn't really matter if the hash seed is statically chosen.
     const HASH_SEED: u64 = comptime 7544877372303327512;
     return struct {
         pub const result: u64 = ret: {
-            const type_name = @typeName(T);
+            const type_name = typing.uniqueName(T);
             var hasher = XxHash64.init(HASH_SEED);
             hasher.update(type_name);
             break :ret hasher.final();

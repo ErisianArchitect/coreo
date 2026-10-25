@@ -936,7 +936,6 @@ comptime {
         const decl = @field(VecUnmanaged(void), name);
         const decl_type = @TypeOf(decl);
         if (@typeInfo(decl_type) == .@"fn" and !@hasDecl(VecManaged(void), name)) {
-            // if (!@hasDecl(VecManaged(void), name)) @compileError("Missing function in VecManaged: " ++ name);
             missing.push(name);
         }
     }
