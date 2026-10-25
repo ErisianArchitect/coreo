@@ -13,6 +13,12 @@ const StackVec = dsa.StackVec;
 pub const StaticTypeMap = typemap.StaticTypeMap;
 pub const StaticTypeSet = typemap.StaticTypeSet;
 
+
+
+pub const MAX_BRANCH_QUOTA: u32 = std.math.maxInt(u32);
+
+
+
 pub fn undefFields(comptime T: type, obj: *T) void {
     inline for (comptime std.meta.fieldNames(T)) |name| {
         @field(obj, name) = undefined;
@@ -209,5 +215,3 @@ pub inline fn typeHash(comptime T: type) u64 {
         };
     }.result;
 }
-
-pub const MAX_BRANCH_QUOTA: u32 = std.math.maxInt(u32);
