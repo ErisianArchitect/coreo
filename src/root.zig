@@ -1,4 +1,3 @@
-//! By convention, root.zig is the root source file when making a package.
 const std = @import("std");
 
 pub const dsa = @import("dsa");
@@ -7,7 +6,12 @@ pub const debug = @import("debug");
 pub const ffi = @import("ffi");
 
 comptime {
-    std.testing.refAllDecls(dsa);
+    @import("debug").checking.checkAllDecls(&.{
+        dsa,
+        comp,
+        debug,
+        ffi,
+    });
 }
 
 const expectEqual = std.testing.expectEqual;

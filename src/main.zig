@@ -6,10 +6,9 @@ const VecUnmanaged = coreo.dsa.VecUnmanaged;
 const VecManaged = coreo.dsa.VecManaged;
 
 const comp = coreo.comp;
-
 const typing = comp.typing;
-
 const debug = coreo.debug;
+const ffi = coreo.ffi;
 
 const print = debug.print;
 const println = debug.println;
@@ -48,15 +47,22 @@ fn uniName(comptime tag: anytype) []const u8 {
     return comptime type_name;
 }
 
+const VkEnum = struct {
+    pub const Foo: u8 = 1;
+    pub const Bar: u8 = 2;
+    pub const Baz: u8 = 4;
+    pub const FooBar = Foo | Bar;
+    pub const FooBaz = Foo | Baz;
+    pub const BarBaz = Bar | Baz;
+    pub const FooBarBaz = Foo | Bar | Baz;
+};
+
 pub fn main(init: std.process.Init) !void {
     _=init;
-    println("{s}", .{@typeName(Uni(.{"foo"}))});
-    println("{s}", .{@typeName(Uni(.{"bar"}))});
-    println("{s}", .{@typeName(Uni(u64))});
-    qprintln(uniName(u16));
-    qprintln(uniName(u32));
-    qprintln(uniName(u64));
-    // typing.Unique__struct_
+    const f = VkEnum.Foo | VkEnum.Bar;
+}
+
+fn uniqueNameTest() !void {
     qprintln(@typeName(comp.typing.Unique(u16)));
     qprintln(@typeName(comp.typing.Unique(u32)));
     qprintln(@typeName(comp.typing.Unique(u64)));

@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 
 const debug = @import("debug");
 
+/// Optionally provide a source location and a message.
 pub const FailureInput = struct {
     src: ?std.lang.SourceLocation = null,
     msg: ?[]const u8 = null,

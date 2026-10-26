@@ -1,63 +1,91 @@
 const std = @import("std");
 
-const tool = @import("build_tool.zig");
+const build_tools = @import("./build_tools/root.zig");
 
-const connectModules = tool.connectModules;
-const Module = tool.Module;
-const Import = tool.Import;
-const imp = tool.imp;
+const project = build_tools.project;
+
+const connectModules = project.connectModules;
+const Module = project.Module;
+const Import = project.Import;
+const imp = project.imp;
+const Imports = project.Imports;
+const Project = project.Project;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-    const coreo_mod = b.addModule("coreo", .{
+
+    const proj = Project.init(b);
+    var build_imports = Imports(64).init();
+    var check_imports = Imports(64).init();
+
+    const coreo_mod_create_options: Module.CreateOptions = .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
-    });
+    };
 
-    const dsa_mod = b.createModule(.{
+    const coreo_mod = proj.addModule("coreo", coreo_mod_create_options);
+    const check_coreo_mod = proj.addModule("coreo_check", coreo_mod_create_options);
+
+    build_imports.connect(imp("coreo", coreo_mod));
+    check_imports.connect(imp("coreo", check_coreo_mod));
+
+    const dsa_mod, const check_dsa_mod = proj.dupedCreateModule(2, .{
         .root_source_file = b.path("src/dsa/root.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const comp_mod = b.createModule(.{
+    build_imports.connect(imp("dsa", dsa_mod));
+    check_imports.connect(imp("dsa", check_dsa_mod));
+
+    const comp_mod, const check_comp_mod = proj.dupedCreateModule(2, .{
         .root_source_file = b.path("src/comp/root.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const debug_mod = b.createModule(.{
+    build_imports.connect(imp("comp", comp_mod));
+    check_imports.connect(imp("comp", check_comp_mod));
+
+    const debug_mod, const check_debug_mod = proj.dupedCreateModule(2, .{
         .root_source_file = b.path("src/debug/root.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const ffi_mod = b.createModule(.{
+    build_imports.connect(imp("debug", debug_mod));
+    check_imports.connect(imp("debug", check_debug_mod));
+
+    const ffi_mod, const check_ffi_mod = proj.dupedCreateModule(2, .{
         .root_source_file = b.path("src/ffi/root.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    const imports: []const Import = &.{
-        imp(.coreo, coreo_mod),
-        imp(.dsa, dsa_mod),
-        imp(.comp, comp_mod),
-        imp(.debug, debug_mod),
-        imp(.ffi, ffi_mod),
-    };
+    build_imports.connect(imp("ffi", ffi_mod));
+    check_imports.connect(imp("ffi", check_ffi_mod));
 
-    connectModules(imports);
+    const build_options = b.addOptions();
+    const check_options = b.addOptions();
+
+    build_options.addOption(bool, "CHECK", false);
+    check_options.addOption(bool, "CHECK", true);
+    
+    build_imports.addOptions("CFG", build_options);
+    check_imports.addOptions("CFG", check_options);
+    
+    const main_mod = b.createModule(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = build_imports.slice(),
+    });
     
     const exe = b.addExecutable(.{
         .name = "coreo",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .imports = imports,
-        }),
+        .root_module = main_mod,
     });
     b.installArtifact(exe);
 
@@ -66,12 +94,21 @@ pub fn build(b: *std.Build) void {
         .root_module = coreo_mod,
     });
     b.installArtifact(lib);
+
+    const check = b.addLibrary(.{
+        .name = "coreo-check",
+        .root_module = check_coreo_mod,
+    });
     
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());
     run_cmd.addPassthruArgs();
+
+    const check_step = b.step("check", "Perform checking");
+    check_step.dependOn(&check.step);
+    
     const mod_tests = b.addTest(.{
         .root_module = coreo_mod,
     });

@@ -1,10 +1,18 @@
 
 const std = @import("std");
+const CFG = @import("CFG");
 
 const dsa = @import("dsa");
-const typemap = @import("typemap.zig");
 
+const typemap = @import("typemap.zig");
 pub const typing = @import("typing.zig");
+
+comptime {
+    @import("debug").checking.checkAllDecls(&.{
+        typemap,
+        typing,
+    });
+}
 
 const XxHash64 = std.hash.XxHash64;
 

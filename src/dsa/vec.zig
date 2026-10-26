@@ -1,6 +1,7 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
+const CFG = @import("CFG");
 
 const comp = @import("comp");
 const dsa = @import("dsa");
@@ -11,6 +12,27 @@ const StackVec = dsa.StackVec;
 const safeAssert = debug.assert.safeAssert;
 
 const Allocator = std.mem.Allocator;
+
+
+comptime { // Checking.
+    if (CFG.CHECK) {
+        const vec_decls = std.meta.declarations(VecUnmanaged(void));
+        var missing = StackVec([]const u8, vec_decls.len).init();
+        for (vec_decls) |name| {
+            const decl = @field(VecUnmanaged(void), name);
+            const decl_type = @TypeOf(decl);
+            if (@typeInfo(decl_type) == .@"fn" and !@hasDecl(VecManaged(void), name)) {
+                missing.push(name);
+            }
+        }
+        if (missing.len > 0) {
+            var missing_names: [missing.len][]const u8 = undefined;
+            @memcpy(&missing_names, missing.items[0..missing.len]);
+            const missing_names_list = comp.joinSlices(.immut, u8, "\n", comp.internArray(.immut, []const u8, missing_names));
+            @compileError(std.fmt.comptimePrint("Missing functions in VecManaged:\n{s}", .{missing_names_list}));
+        }
+    }
+}
 
 pub fn VecUnmanaged(comptime T: type) type {
     return extern struct {
@@ -927,22 +949,4 @@ pub fn VecManaged(comptime T: type) type {
             self.inner.clearRange(start, end);
         }
     };
-}
-
-comptime {
-    const vec_decls = std.meta.declarations(VecUnmanaged(void));
-    var missing = StackVec([]const u8, vec_decls.len).init();
-    for (vec_decls) |name| {
-        const decl = @field(VecUnmanaged(void), name);
-        const decl_type = @TypeOf(decl);
-        if (@typeInfo(decl_type) == .@"fn" and !@hasDecl(VecManaged(void), name)) {
-            missing.push(name);
-        }
-    }
-    if (missing.len > 0) {
-        var missing_names: [missing.len][]const u8 = undefined;
-        @memcpy(&missing_names, missing.items[0..missing.len]);
-        const missing_names_list = comp.joinSlices(.immut, u8, "\n", comp.internArray(.immut, []const u8, missing_names));
-        @compileError(std.fmt.comptimePrint("Missing functions in VecManaged:\n{s}", .{missing_names_list}));
-    }
 }

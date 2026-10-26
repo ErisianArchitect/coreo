@@ -4,7 +4,15 @@ const builtin = @import("builtin");
 
 const comp = @import("comp");
 
+pub const checking = @import("checking.zig");
 pub const assert = @import("assert.zig");
+
+comptime {
+    @import("debug").checking.checkAllDecls(&.{
+        checking,
+        assert,
+    });
+}
 
 pub const print = std.debug.print;
 
