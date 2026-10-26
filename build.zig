@@ -55,6 +55,8 @@ pub fn build(b: *std.Build) void {
 
     build_options.addOption(bool, "CHECK", false);
     check_options.addOption(bool, "CHECK", true);
+    build_options.addOption([]const u8, "REPO", "https://github.com/ErisianArchitect/coreo");
+    check_options.addOption([]const u8, "REPO", "https://github.com/ErisianArchitect/coreo");
 
     imports.addOptions("CFG", build_options, check_options);
     
