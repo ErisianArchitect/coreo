@@ -2,8 +2,8 @@
 const std = @import("std");
 const CFG = @import("CFG");
 
-pub fn checkAllDecls(comptime types: []const type) void {comptime {
-    if (!CFG.CHECK) return;
+pub fn checkAllDecls(comptime check: bool, comptime types: []const type) void {comptime {
+    if (!check) return;
     for (types) |t| {
         std.testing.refAllDecls(t);
     }

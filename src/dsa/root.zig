@@ -8,13 +8,16 @@ const object_pool = @import("object_pool.zig");
 const slot_map = @import("slot_map.zig");
 
 comptime {
-    @import("debug").checking.checkAllDecls(&.{
-        vec,
-        stack_vec,
-        gen_id,
-        object_pool,
-        slot_map,
-    });
+    @import("debug").checking.checkAllDecls(
+        @import("CFG").CHECK,
+        &.{
+            vec,
+            stack_vec,
+            gen_id,
+            object_pool,
+            slot_map,
+        },
+    );
 }
 
 pub const VecUnmanaged = vec.VecUnmanaged;

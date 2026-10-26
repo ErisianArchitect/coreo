@@ -6,12 +6,15 @@ pub const debug = @import("debug");
 pub const ffi = @import("ffi");
 
 comptime {
-    @import("debug").checking.checkAllDecls(&.{
-        dsa,
-        comp,
-        debug,
-        ffi,
-    });
+    @import("debug").checking.checkAllDecls(
+        @import("CFG").CHECK,
+        &.{
+            dsa,
+            comp,
+            debug,
+            ffi,
+        },
+    );
 }
 
 const expectEqual = std.testing.expectEqual;

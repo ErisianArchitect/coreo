@@ -8,10 +8,13 @@ pub const checking = @import("checking.zig");
 pub const assert = @import("assert.zig");
 
 comptime {
-    @import("debug").checking.checkAllDecls(&.{
-        checking,
-        assert,
-    });
+    @import("debug").checking.checkAllDecls(
+        @import("CFG").CHECK,
+        &.{
+            checking,
+            assert,
+        },
+    );
 }
 
 pub const print = std.debug.print;

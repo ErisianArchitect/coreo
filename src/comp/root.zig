@@ -8,10 +8,13 @@ const typemap = @import("typemap.zig");
 pub const typing = @import("typing.zig");
 
 comptime {
-    @import("debug").checking.checkAllDecls(&.{
-        typemap,
-        typing,
-    });
+    @import("debug").checking.checkAllDecls(
+        @import("CFG").CHECK,
+        &.{
+            typemap,
+            typing,
+        },
+    );
 }
 
 const XxHash64 = std.hash.XxHash64;
