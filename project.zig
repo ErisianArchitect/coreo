@@ -60,12 +60,15 @@ pub fn Imports(comptime fixed_buffer_capacity: usize) type {
 
         /// This should be done after all modules are connected but before options are added..
         pub fn addDependency(self: *Self, name: []const u8, module: *Module) void {
+            if (self.len >= self.buf.len) @panic("Buffer overflow. Use a higher number for fixed_buffer_capacity, nimwit.");
             for (self.slice()) |m| {
                 m.module.addImport(name, module);
             }
+            self.buf[self.len] = imp(name, module);
+            self.len += 1;
         }
 
-        /// This should be done after all modules are connected but after dependencies are added.
+        /// This should be done after all modules are connected but before dependencies are added.
         pub fn addOptions(self: *Self, name: []const u8, options: *Build.Step.Options) void {
             if (self.len == 0) @panic("No modules to add options to.");
             const opts = options.createModule();
