@@ -22,6 +22,11 @@ pub fn connectImports(imports: []const Import) void {
     }
 }
 
+pub const ConnectionType = enum {
+    OneWay,
+    TwoWay,
+};
+
 /// Use a fixed_buffer_capacity that will fit the number of imports
 /// you want to connect. A good recommended size is 16 for small projects,
 /// 32 for medium projects, and 64 or more for much larger ones. But you
@@ -31,6 +36,7 @@ pub fn Imports(comptime fixed_buffer_capacity: usize) type {
         const Self = @This();
 
         buf: [fixed_buffer_capacity]Import,
+        connection_types: [fixed_buffer_capacity]ConnectionType,
         len: usize,
 
         pub fn init() Self {
@@ -45,34 +51,44 @@ pub fn Imports(comptime fixed_buffer_capacity: usize) type {
             return self.buf[0..self.len];
         }
 
-        /// Adds import to the buffer and simultaneously forms a
-        /// two-way connection with the rest of the imports.
-        pub fn connect(self: *Self, import: Import) void {
+        pub fn connectAdv(self: *Self, comptime connection_type: ConnectionType, import: Import) void {
             if (self.len >= self.buf.len) @panic("Buffer overflow. Use a higher number for fixed_buffer_capacity, nimwit.");
-            for (self.slice()) |other| {
-                other.module.addImport(import.name, import.module);
-                import.module.addImport(other.name, other.module);
-                import.module.addImport(import.name, import.module);
+            for (self.slice(), 0..) |other, i| {
+                if (self.connection_types[i] == .OneWay) continue;
+                switch (comptime connection_type) {
+                    .OneWay => {
+                        other.module.addImport(import.name, import.module);
+                    },
+                    .TwoWay => {
+                        other.module.addImport(import.name, import.module);
+                        import.module.addImport(other.name, other.module);
+                        import.module.addImport(import.name, import.module);
+                    }
+                }
             }
             self.buf[self.len] = import;
+            self.connection_types[self.len] = connection_type;
             self.len += 1;
         }
 
-        /// This should be done after all modules are connected and all options are added.
+        pub fn connect(self: *Self, import: Import) void {
+            self.connectAdv(.TwoWay, import);
+        }
+
+        pub fn connectOneWay(self: *Self, import: Import) void {
+            self.connectAdv(.OneWay, import);
+        }
+
+        /// This should be done after all modules are connected.
         pub fn addDependency(self: *Self, name: []const u8, module: *Module) void {
-            if (self.len >= self.buf.len) @panic("Buffer overflow. Use a higher number for fixed_buffer_capacity, nimwit.");
-            for (self.slice()) |m| {
-                m.module.addImport(name, module);
-            }
-            self.buf[self.len] = imp(name, module);
-            self.len += 1;
+            self.connectOneWay(imp(name, module));
         }
 
         /// This should be done after all modules are connected but before dependencies are added.
         pub fn addOptions(self: *Self, name: []const u8, options: *Build.Step.Options) void {
             if (self.len == 0) @panic("No modules to add options to.");
             const opts = options.createModule();
-            self.connect(imp(name, opts));
+            self.connectAdv(.OneWay, imp(name, opts));
         }
     };
 }
