@@ -1,3 +1,0 @@
-[submodule "build_tools"]
-	path = build_tools
-	url = https://github.com/ErisianArchitect/zig-build-tools.git
