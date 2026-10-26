@@ -59,7 +59,6 @@ const VkEnum = struct {
 
 pub fn main(init: std.process.Init) !void {
     _=init;
-    const f = VkEnum.Foo | VkEnum.Bar;
 }
 
 fn uniqueNameTest() !void {

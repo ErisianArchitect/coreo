@@ -10,14 +10,14 @@ const Import = project.Import;
 const imp = project.imp;
 const Imports = project.Imports;
 const Project = project.Project;
+const CheckImports = project.BuildCheckImports;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const proj = Project.init(b);
-    var build_imports = Imports(64).init();
-    var check_imports = Imports(64).init();
+    var imports = CheckImports(16).init();
 
     const coreo_mod_create_options: Module.CreateOptions = .{
         .root_source_file = b.path("src/root.zig"),
@@ -28,44 +28,31 @@ pub fn build(b: *std.Build) void {
     const coreo_mod = proj.addModule("coreo", coreo_mod_create_options);
     const check_coreo_mod = proj.addModule("coreo_check", coreo_mod_create_options);
 
-    build_imports.connect(imp("coreo", coreo_mod));
-    check_imports.connect(imp("coreo", check_coreo_mod));
+    imports.connect("coreo", coreo_mod, check_coreo_mod);
 
-    const dsa_mod, const check_dsa_mod = proj.dupedCreateModule(2, .{
+    imports.connectDuped("dsa", proj.dupedCreateModule(2, .{
         .root_source_file = b.path("src/dsa/root.zig"),
         .target = target,
         .optimize = optimize,
-    });
+    }));
 
-    build_imports.connect(imp("dsa", dsa_mod));
-    check_imports.connect(imp("dsa", check_dsa_mod));
-
-    const comp_mod, const check_comp_mod = proj.dupedCreateModule(2, .{
+    imports.connectDuped("comp", proj.dupedCreateModule(2, .{
         .root_source_file = b.path("src/comp/root.zig"),
         .target = target,
         .optimize = optimize,
-    });
+    }));
 
-    build_imports.connect(imp("comp", comp_mod));
-    check_imports.connect(imp("comp", check_comp_mod));
-
-    const debug_mod, const check_debug_mod = proj.dupedCreateModule(2, .{
+    imports.connectDuped("debug", proj.dupedCreateModule(2, .{
         .root_source_file = b.path("src/debug/root.zig"),
         .target = target,
         .optimize = optimize,
-    });
+    }));
 
-    build_imports.connect(imp("debug", debug_mod));
-    check_imports.connect(imp("debug", check_debug_mod));
-
-    const ffi_mod, const check_ffi_mod = proj.dupedCreateModule(2, .{
+    imports.connectDuped("ffi", proj.dupedCreateModule(2, .{
         .root_source_file = b.path("src/ffi/root.zig"),
         .target = target,
         .optimize = optimize,
-    });
-
-    build_imports.connect(imp("ffi", ffi_mod));
-    check_imports.connect(imp("ffi", check_ffi_mod));
+    }));
 
     const build_options = b.addOptions();
     const check_options = b.addOptions();
@@ -73,14 +60,14 @@ pub fn build(b: *std.Build) void {
     build_options.addOption(bool, "CHECK", false);
     check_options.addOption(bool, "CHECK", true);
     
-    build_imports.addOptions("CFG", build_options);
-    check_imports.addOptions("CFG", check_options);
+    imports.build.addOptions("CFG", build_options);
+    imports.check.addOptions("CFG", check_options);
     
     const main_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = build_imports.slice(),
+        .imports = imports.build.slice(),
     });
     
     const exe = b.addExecutable(.{
