@@ -4,11 +4,7 @@ const build_tools = @import("./build_tools/root.zig");
 
 const project = build_tools.project;
 
-const connectModules = project.connectModules;
 const Module = project.Module;
-const Import = project.Import;
-const imp = project.imp;
-const Imports = project.Imports;
 const Project = project.Project;
 const CheckImports = project.BuildCheckImports;
 
@@ -59,9 +55,8 @@ pub fn build(b: *std.Build) void {
 
     build_options.addOption(bool, "CHECK", false);
     check_options.addOption(bool, "CHECK", true);
-    
-    imports.build.addOptions("CFG", build_options);
-    imports.check.addOptions("CFG", check_options);
+
+    imports.addOptions("CFG", build_options, check_options);
     
     const main_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
