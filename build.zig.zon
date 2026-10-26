@@ -32,10 +32,6 @@
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
     .dependencies = .{
-        .build_tool = .{
-            .url = "git+https://github.com/ErisianArchitect/build_tool.git#1572fb5eacf1ddaa7b6f50162e154d2c2966ce84",
-            .hash = "build_tool-0.0.0-VDtiqIcdAAC2WyToBL_aCPnva4Idl5iNi52yY1JaXyh1",
-        },
     },
     .paths = .{
         "build.zig",
