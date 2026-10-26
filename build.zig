@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const build_tools = @import("./build_tools/root.zig");
+const build_tools = @import("build_tools/root.zig");
 
 const project = build_tools.project;
 
