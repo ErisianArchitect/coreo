@@ -40,7 +40,7 @@ pub fn Imports(comptime fixed_buffer_capacity: usize) type {
         len: usize,
 
         pub fn init() Self {
-            return .{.buf = undefined, .len = 0};
+            return .{.buf = undefined, .connection_types = undefined, .len = 0,};
         }
 
         pub fn slice(self: *const Self) []const Import {
