@@ -1,4 +1,4 @@
-
+// DO NOT MODIFY THIS FILE IF YOU ARE NOT IN THE `build_tools` REPOSITORY!
 // version: 0.1.0
 
 const std = @import("std");
@@ -58,7 +58,7 @@ pub fn Imports(comptime fixed_buffer_capacity: usize) type {
             self.len += 1;
         }
 
-        /// This should be done after all modules are connected but before options are added..
+        /// This should be done after all modules are connected and all options are added.
         pub fn addDependency(self: *Self, name: []const u8, module: *Module) void {
             if (self.len >= self.buf.len) @panic("Buffer overflow. Use a higher number for fixed_buffer_capacity, nimwit.");
             for (self.slice()) |m| {
@@ -99,11 +99,13 @@ pub fn BuildCheckImports(comptime buffer_size: usize) type {
             self.connect(name, modules[0], modules[1]);
         }
 
+        /// This should be done after all modules are connected and all options are added.
         pub fn addDependency(self: *Self, name: []const u8, build_dep: *Module, check_dep: ?*Module) void {
             self.build.addDependency(name, build_dep);
             self.check.addDependency(name, check_dep orelse build_dep);
         }
 
+        /// This should be done after all modules are connected but before dependencies are added.
         pub fn addOptions(self: *Self, name: []const u8, build_options: *Build.Step.Options, check_options: *Build.Step.Options) void {
             self.build.addOptions(name, build_options);
             self.check.addOptions(name, check_options);
