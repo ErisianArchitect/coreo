@@ -41,10 +41,8 @@ fn Uni(comptime tag: anytype) type {
     };
 }
 
-fn uniName(comptime tag: anytype) []const u8 {
-    // main.Uni__struct_
-    const type_name = comptime @typeName(Uni(tag));
-    return comptime type_name;
+fn non_inline() void {
+    qprintln("This is a test.");
 }
 
 const VkEnum = struct {
@@ -59,6 +57,7 @@ const VkEnum = struct {
 
 pub fn main(init: std.process.Init) !void {
     _=init;
+    comp.inlineCall(non_inline, .{});
 }
 
 fn uniqueNameTest() !void {

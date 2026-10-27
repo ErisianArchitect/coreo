@@ -226,3 +226,15 @@ pub inline fn typeHash(comptime T: type) u64 {
         };
     }.result;
 }
+
+fn FnReturn(comptime func: anytype) type {
+    if (@typeInfo(@TypeOf(func)).@"fn".return_type) |ty| {
+        return ty;
+    } else {
+        return void;
+    }
+}
+
+pub inline fn inlineCall(comptime func: anytype, args: anytype) FnReturn(func) {
+    return @call(.always_inline, func, args);
+}
