@@ -59,6 +59,8 @@ pub fn isAutoLayout(comptime T: type) bool {
     return isLayout(T, .@"auto");
 }
 
+// This is a bit of a hack, and is dependent on the compiler version.
+// COMPILER(VERSION): '0.17.0'
 pub fn Unique(comptime tag: anytype) type {
     return struct {
         const TYPE = opaque {
@@ -72,17 +74,40 @@ pub fn Unique(comptime tag: anytype) type {
     }.@"$T"(tag);
 }
 
-const UNIQUE_NAME_PREFIX_WIDTH: usize = blk: {
-    const sample_name = @typeName(Unique(null));
-    for (sample_name, 0..) |c, i| {
-        if (c >= '0' and c <= '9') break :blk i;
-    }
-    break :blk 0;
-};
-
-pub inline fn uniqueName(comptime tag: anytype) []const u8 {
-    return comptime @typeName(Unique(tag))[UNIQUE_NAME_PREFIX_WIDTH..];
+inline fn isDigit(chr: u8) bool {
+    return chr >= '0' and chr <= '9';
 }
+
+// This is a bit of a hack, and is dependent on the compiler version.
+// COMPILER(VERSION): '0.17.0'
+pub inline fn uniqueName(comptime tag: anytype) []const u8 {
+    const PREFIX_LEN: usize = comptime blk: {
+        const sample_name = @typeName(Unique(tag));
+        for (sample_name, 0..) |c, i| {
+            if (isDigit(c)) break :blk i;
+        } else @compileError("Failed to find first digit.");
+    };
+    return comptime @typeName(Unique(tag))[PREFIX_LEN..];
+}
+
+// This is a bit of a hack, and is dependent on the compiler version.
+// COMPILER(VERSION): '0.17.0'
+pub inline fn uniqueId(comptime tag: anytype) u32 {
+    return comptime blk: {
+        const name = uniqueName(tag);
+        var count: usize = 0;
+        for (name) |chr| {
+            if (!isDigit(chr)) {
+                break;
+            }
+            count += 1;
+        }
+        const digits = name[0..count];
+        break :blk std.fmt.parseInt(u32, digits, 10) catch unreachable;
+    };
+}
+
+pub const NULL_ID: u32 = uniqueId(null);
 
 pub fn GenericOpaqueSeal(comptime outer_tag: anytype)
 fn(comptime tag: anytype) type {

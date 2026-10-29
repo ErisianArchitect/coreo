@@ -136,7 +136,7 @@ pub fn StaticTypeMap(comptime ItemT: type) type {
                     for (self.pairs, 0..) |p, i| {
                         buf[i] = p[1];
                     }
-                    break :ret comp.internArray(.immut, type, buf);
+                    break :ret comp.internArray(.immut, ItemT, buf);
                 };
             }.result;
         }
