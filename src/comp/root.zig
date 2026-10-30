@@ -64,7 +64,32 @@ pub const Mutability = enum {
     }
 };
 
-pub inline fn internArray(
+pub inline fn dupeSlice(
+    comptime T: type,
+    comptime slice: []const T,
+) []const T {
+    return struct {
+        const storage = blk: {
+            var items: [slice.len]T = undefined;
+            @memcpy(&items, slice);
+            break :blk items;
+        };
+        const result: []const T = &storage;
+    }.result;
+}
+
+pub inline fn dupeSliceMut(comptime T: type, comptime slice: []const T) []T {
+    return struct {
+        var storage = blk: {
+            var items: [slice.len]T = undefined;
+            @memcpy(&items, slice);
+            break :blk items;
+        };
+        const result: []T = &storage;
+    }.result;
+}
+
+pub inline fn internArrayAdv(
     comptime mutability: Mutability,
     comptime T: type,
     comptime arr: anytype,
@@ -84,7 +109,21 @@ pub inline fn internArray(
     }
 }
 
-pub inline fn internObject(
+pub inline fn internArray(
+    comptime T: type,
+    comptime arr: anytype,
+) []const T {
+    return internArrayAdv(.immut, T, arr);
+}
+
+pub inline fn internArrayMut(
+    comptime T: type,
+    comptime arr: anytype,
+) []T {
+    return internArrayAdv(.mut, T, arr);
+}
+
+pub inline fn internObjectAdv(
     comptime mutability: Mutability,
     comptime obj: anytype,
 ) switch (mutability) {
@@ -103,7 +142,20 @@ pub inline fn internObject(
     }
 }
 
-pub inline fn joinSlices(
+pub inline fn internObject(
+    comptime obj: anytype,
+) *const @TypeOf(obj) {
+    return internObjectAdv(.immut, obj);
+}
+
+pub inline fn internObjectMut(
+    comptime obj: anytype,
+) *@TypeOf(obj) {
+    return internObjectAdv(.mut, obj);
+}
+
+
+pub inline fn joinSlicesAdv(
     comptime mutability: Mutability,
     comptime T: type,
     comptime separator: ?[]const T,
@@ -135,9 +187,25 @@ pub inline fn joinSlices(
                 @memcpy(buf[offset..][0..s.len], s);
                 offset += s.len;
             }
-            break :ret internArray(mutability, T, buf);
+            break :ret internArrayAdv(mutability, T, buf);
         };
     }.result;
+}
+
+pub fn joinSlices(
+    comptime T: type,
+    comptime separator: ?[]const T,
+    comptime slices: []const []const T,
+) []const T {
+    return joinSlicesAdv(.immut, T, separator, slices);
+}
+
+pub fn joinSlicesMut(
+    comptime T: type,
+    comptime separator: ?[]const T,
+    comptime slices: []const []const T,
+) []T {
+    return joinSlicesAdv(.mut, T, separator, slices);
 }
 
 pub fn zipWithRight(
@@ -159,7 +227,7 @@ pub fn zipWithRight(
                 new_items[i].@"0" = lhs;
                 new_items[i].@"1" = rhs;
             }
-            break :ret internArray(mutability, Tup, new_items);
+            break :ret internArrayAdv(mutability, Tup, new_items);
         };
     }.result;
 }
@@ -183,7 +251,7 @@ pub fn zipWithLeft(
                 new_items[i].@"0" = lhs;
                 new_items[i].@"1" = rhs;
             }
-            break :ret internArray(mutability, Tup, new_items);
+            break :ret internArrayAdv(mutability, Tup, new_items);
         };
     }.result;
 }
@@ -214,27 +282,6 @@ pub fn dedup(comptime T: type, comptime arr: anytype) [uniqueCount(arr)]T {
     return items.items;
 }
 
-pub inline fn typeHash(comptime T: type) u64 {
-    // It doesn't really matter if the hash seed is statically chosen.
-    const HASH_SEED: u64 = comptime 7544877372303327512;
-    return struct {
-        pub const result: u64 = ret: {
-            const type_name = typing.uniqueName(T);
-            var hasher = XxHash64.init(HASH_SEED);
-            hasher.update(type_name);
-            break :ret hasher.final();
-        };
-    }.result;
-}
-
-fn FnReturn(comptime func: anytype) type {
-    if (@typeInfo(@TypeOf(func)).@"fn".return_type) |ty| {
-        return ty;
-    } else {
-        return void;
-    }
-}
-
-pub inline fn inlineCall(comptime func: anytype, args: anytype) FnReturn(func) {
+pub inline fn inlineCall(comptime func: anytype, args: anytype) typing.FnReturn(func) {
     return @call(.always_inline, func, args);
 }

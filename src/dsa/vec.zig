@@ -28,7 +28,7 @@ comptime { // Checking.
         if (missing.len > 0) {
             var missing_names: [missing.len][]const u8 = undefined;
             @memcpy(&missing_names, missing.items[0..missing.len]);
-            const missing_names_list = comp.joinSlices(.immut, u8, "\n", comp.internArray(.immut, []const u8, missing_names));
+            const missing_names_list = comp.joinSlices(u8, "\n", comp.internArray([]const u8, missing_names));
             @compileError(std.fmt.comptimePrint("Missing functions in VecManaged:\n{s}", .{missing_names_list}));
         }
     }

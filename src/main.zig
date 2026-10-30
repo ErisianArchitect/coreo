@@ -15,12 +15,6 @@ const println = debug.println;
 const qprint = debug.qprint;
 const qprintln = debug.qprintln;
 
-pub fn UT(comptime tag: @EnumLiteral()) type {
-    return struct {
-        const _ = tag;
-    };
-}
-
 fn fail() noreturn {
     if (@inComptime()) {
         @compileError("Failure.");
@@ -35,82 +29,31 @@ fn orFail(result: anytype) @typeInfo(@TypeOf(result)).error_union.payload {
 
 const testFailure = debug.assert.failure("Test Failure");
 
-fn Uni(comptime tag: anytype) type {
-    return struct {
-        const TAG = tag;
-    };
-}
-
-fn non_inline() void {
-    qprintln("This is a test.");
-}
-
-const VkEnum = struct {
-    pub const Foo: u8 = 1;
-    pub const Bar: u8 = 2;
-    pub const Baz: u8 = 4;
-    pub const FooBar = Foo | Bar;
-    pub const FooBaz = Foo | Baz;
-    pub const BarBaz = Bar | Baz;
-    pub const FooBarBaz = Foo | Bar | Baz;
-};
 
 const HashMap = std.HashMapUnmanaged;
 
 const Alloc = std.mem.Allocator;
 
-// const TypeMap = struct {
-//     const Self = @This();
-//     const Context = struct {
-//         pub fn hash(_: Context, k: u32) u64 {
-//             const SEED: u64 = comptime 10142869613977478491;
-//             var hasher = std.hash.XxHash64.init(SEED);
-//             std.hash.autoHash(&hasher, k);
-//             return hasher.final();
-//         }
-
-//         pub fn eql(_: Context, a: u32, b: u32) bool {
-//             return a == b;
-//         }
-//     };
-//     const Map = HashMap(u32, []const u8, Context, 80);
-//     map: Map = .empty,
-
-//     pub const empty: Self = .{.map = .empty};
-
-//     const PrivateToken = opaque{};
-
-//     const Seal = comp.typing.GenericOpaqueSeal(PrivateToken);
-
-//     pub inline fn keyFor(comptime Key: type) u32 {
-//         return comptime comp.typing.uniqueId(Seal(Key));
-//     }
-
-//     pub inline fn insert(self: *Self, alloc: Alloc, comptime Key: type, value: []const u8) !void {
-//         try self.map.put(alloc, keyFor(Key), value);
-//     }
-
-//     pub inline fn get(self: *const Self, comptime Key: type) ?[]const u8 {
-//         return self.map.get(keyFor(Key));
-//     }
-
-//     pub inline fn contains(self: *const Self, comptime Key: type) bool {
-//         return self.map.contains(keyFor(Key));
-//     }
-
-//     pub inline fn remove(self: *Self, comptime Key: type) ?[]const u8 {
-//         return if (self.map.fetchRemove(keyFor(Key))) |kv| kv.value else null;
-//     }
-// };
-
 const TypeMap = coreo.dsa.TypeMapUnmanaged;
+const String = coreo.str.string.StringManaged;
 
 pub fn main(init: std.process.Init) !void {
     @setEvalBranchQuota(std.math.maxInt(u32));
-
+    
     const gpa = init.gpa;
     var map = TypeMap([]const u8).empty;
     defer map.map.deinit(gpa);
+
+    var buf = String.init(gpa);
+    defer buf.deinit();
+
+    try buf.pushStr("The quick brown fox jumps over the lazy dog.");
+    try buf.push('\n');
+    try buf.pushStr("Line two.");
+
+    println("{f}", .{buf});
+
+    println("Hash for u32: {d}", .{comp.typing.typeHash(u32)});
 
     // map.insert(gpa, u32, "Type(u32)") catch @panic("Failure");
     // map.insert(gpa, u64, "Type(u64)") catch @panic("Failure");
@@ -150,7 +93,7 @@ pub fn ManyIds(comptime count: usize) []const u32 {
         for (0..count) |i| {
             ids[i] = comp.typing.uniqueId(i);
         }
-        break :blk comp.internArray(.immut, u32, ids);
+        break :blk comp.internArray(u32, ids);
     };
 }
 

@@ -4,7 +4,7 @@ const comp = @import("comp");
 
 const PrivateToken = struct{};
 
-const typeHash = comp.typeHash;
+const typeHash = comp.typing.typeHash;
 
 const BucketCalc = struct {
     const Self = @This();
@@ -75,7 +75,7 @@ pub fn StaticTypeMap(comptime ItemT: type) type {
                         };
                         offsets[bucket] += 1;
                     }
-                    const interned_slots = comp.internArray(.immut, Slot, slots);
+                    const interned_slots = comp.internArrayAdv(.immut, Slot, slots);
                     var buckets: [bucket_count][]const Slot = @splat(&.{});
                     var offset = 0;
                     for (counts, 0..) |count, i| {
@@ -90,7 +90,7 @@ pub fn StaticTypeMap(comptime ItemT: type) type {
                         offset += count;
                     }
                     break :ret .{
-                        .buckets = comp.internArray(.immut, []const Slot, buckets),
+                        .buckets = comp.internArrayAdv(.immut, []const Slot, buckets),
                         .pairs = items,
                         .len = items.len,
                     };
@@ -123,7 +123,7 @@ pub fn StaticTypeMap(comptime ItemT: type) type {
                     for (self.pairs, 0..) |p, i| {
                         buf[i] = p[0];
                     }
-                    break :ret comp.internArray(.immut, type, buf);
+                    break :ret comp.internArrayAdv(.immut, type, buf);
                 };
             }.result;
         }
@@ -136,7 +136,7 @@ pub fn StaticTypeMap(comptime ItemT: type) type {
                     for (self.pairs, 0..) |p, i| {
                         buf[i] = p[1];
                     }
-                    break :ret comp.internArray(.immut, ItemT, buf);
+                    break :ret comp.internArrayAdv(.immut, ItemT, buf);
                 };
             }.result;
         }

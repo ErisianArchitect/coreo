@@ -4,6 +4,7 @@ pub const dsa = @import("dsa");
 pub const comp = @import("comp");
 pub const debug = @import("debug");
 pub const ffi = @import("ffi");
+pub const str = @import("str");
 
 comptime {
     @import("debug").checking.checkAllDecls(
@@ -13,6 +14,7 @@ comptime {
             comp,
             debug,
             ffi,
+            str,
         },
     );
 }
@@ -128,7 +130,7 @@ test "Static Type Map" {
             for (start..end, 0..) |tag, i| {
                 pairs[i] = .{Ty(tag), tag};
             }
-            return comp.internArray(.immut, struct {type, usize}, pairs);
+            return comp.internArray(struct {type, usize}, pairs);
         }
     };
     const pairs = comptime t.manyTyPairs(1000, 2000);

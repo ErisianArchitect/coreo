@@ -5,14 +5,12 @@ const lang = std.lang;
 
 const ContainerLayout = lang.Type.ContainerLayout;
 
-pub fn isString(comptime T: type) bool {
-    return switch (@typeInfo(T)) {
-        .pointer => |p| switch (@typeInfo(p.child)) {
-            .array => |a| a.child == u8,
-            else => p.child == u8 and p.size == .slice,
-        },
-        else => return false,
-    };
+pub fn FnReturn(comptime func: anytype) type {
+    if (@typeInfo(@TypeOf(func)).@"fn".return_type) |ty| {
+        return ty;
+    } else {
+        return void;
+    }
 }
 
 pub fn PointerChild(comptime T: type) type {
@@ -81,13 +79,13 @@ inline fn isDigit(chr: u8) bool {
 // This is a bit of a hack, and is dependent on the compiler version.
 // COMPILER(VERSION): '0.17.0'
 pub inline fn uniqueName(comptime tag: anytype) []const u8 {
+    const full_name = comptime @typeName(Unique(tag));
     const PREFIX_LEN: usize = comptime blk: {
-        const sample_name = @typeName(Unique(tag));
-        for (sample_name, 0..) |c, i| {
+        for (full_name, 0..) |c, i| {
             if (isDigit(c)) break :blk i;
         } else @compileError("Failed to find first digit.");
     };
-    return comptime @typeName(Unique(tag))[PREFIX_LEN..];
+    return comptime full_name[PREFIX_LEN..];
 }
 
 // This is a bit of a hack, and is dependent on the compiler version.
@@ -107,8 +105,6 @@ pub inline fn uniqueId(comptime tag: anytype) u32 {
     };
 }
 
-pub const NULL_ID: u32 = uniqueId(null);
-
 pub fn GenericOpaqueSeal(comptime outer_tag: anytype)
 fn(comptime tag: anytype) type {
     return struct {
@@ -122,3 +118,18 @@ fn(comptime tag: anytype) type {
     }.Inner;
 }
 
+pub inline fn anyHash(comptime tag: anytype) u64 {
+    return struct {
+        const SEED: u64 = 17761616753254605693;
+        pub const HASH: u64 = blk: {
+            var hasher = std.hash.XxHash64.init(SEED);
+            const type_id = uniqueId(tag);
+            std.hash.autoHash(&hasher, type_id);
+            break :blk hasher.final();
+        };
+    }.HASH;
+}
+
+pub inline fn typeHash(comptime T: type) u64 {
+    return comptime anyHash(T);
+}

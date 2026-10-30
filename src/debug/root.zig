@@ -3,6 +3,7 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const comp = @import("comp");
+const str = @import("str");
 
 pub const checking = @import("checking.zig");
 pub const assert = @import("assert.zig");
@@ -24,7 +25,7 @@ pub inline fn println(comptime fmt: []const u8, args: anytype) void {
 }
 
 inline fn autoFmt(comptime T: type) []const u8 {
-    return comptime switch (comp.typing.isString(T)) {
+    return comptime switch (str.isString(T)) {
         false => "{any}",
         true => "{s}",
     };
