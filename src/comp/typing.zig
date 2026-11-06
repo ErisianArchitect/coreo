@@ -167,24 +167,28 @@ pub const TypeId = enum(u32) {
     }
 
     pub inline fn of(comptime T: type) Self {
-        return comptime ret: {
-            const name = @typeName(TypeIdUniqueType(T));
-            const prefix_len: usize = blk: {
-                for (0.., name) |i, c| {
-                    if (isDigit(c)) break :blk i;
-                } else @compileError("Failed to find first digit.");
+        const Result = struct {
+            pub const result = ret: {
+                const name = @typeName(TypeIdUniqueType(T));
+                @setEvalBranchQuota(1000 + name.len * 10);
+                const prefix_len: usize = blk: {
+                    for (0.., name) |i, c| {
+                        if (isDigit(c)) break :blk i;
+                    } else @compileError("Failed to find first digit.");
+                };
+                const suffix = name[prefix_len..];
+                const suffix_len: usize = blk: {
+                    for (0.., suffix) |i, c| {
+                        if (!isDigit(c)) break :blk i;
+                    } else break :blk suffix.len;
+                };
+                const digits = suffix[0..suffix_len];
+                const id_raw: u32 = std.fmt.parseInt(u32, digits, 10) catch @compileError("Failed to parse int.");
+                // Add 1 to id_raw to ensure non-zero value.
+                break :ret TypeId.init(id_raw + 1);
             };
-            const suffix = name[prefix_len..];
-            const suffix_len: usize = blk: {
-                for (0.., suffix) |i, c| {
-                    if (!isDigit(c)) break :blk i;
-                } else break :blk suffix.len;
-            };
-            const digits = suffix[0..suffix_len];
-            const id_raw: u32 = std.fmt.parseInt(u32, digits, 10) catch @compileError("Failed to parse int.");
-            // Add 1 to id_raw to ensure non-zero value.
-            break :ret TypeId.init(id_raw + 1);
         };
+        return comptime Result.result;
     }
 
     pub inline fn value(self: Self) u32 {
