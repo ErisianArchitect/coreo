@@ -5,8 +5,16 @@ const lang = std.lang;
 
 const ContainerLayout = lang.Type.ContainerLayout;
 
-pub fn FnReturn(comptime func: anytype) type {
-    if (@typeInfo(@TypeOf(func)).@"fn".return_type) |ty| {
+pub fn fieldCount(comptime T: type) comptime_int {
+    return comptime std.meta.fieldTypes(T).len;
+}
+
+pub fn paramCount(comptime F: type) comptime_int {
+    return comptime @typeInfo(F).@"fn".param_types.len;
+}
+
+pub fn FnReturn(comptime F: type) type {
+    if (@typeInfo(F).@"fn".return_type) |ty| {
         return ty;
     } else {
         return void;
@@ -91,7 +99,7 @@ pub inline fn uniqueName(comptime tag: anytype) []const u8 {
 // This is a bit of a hack, and is dependent on the compiler version.
 // COMPILER(VERSION): '0.17.0'
 pub inline fn uniqueId(comptime tag: anytype) u32 {
-    return comptime blk: {
+    const SUB_ID = comptime blk: {
         const name = uniqueName(tag);
         var count: usize = 0;
         for (name) |chr| {
@@ -103,6 +111,35 @@ pub inline fn uniqueId(comptime tag: anytype) u32 {
         const digits = name[0..count];
         break :blk std.fmt.parseInt(u32, digits, 10) catch unreachable;
     };
+    // Add 1 to the SUB_ID to ensure it is greater than 0. I don't expect a max value.
+    return comptime SUB_ID + 1;
+}
+
+pub const TypeId = enum(u32) {
+    const Self = @This();
+    
+    null = 0,
+    _,
+
+    pub inline fn init(val: u32) Self {
+        @setRuntimeSafety(false);
+        return @fromBackingInt(val);
+    }
+
+    pub inline fn of(comptime T: type) Self {
+        return comptime .init(uniqueId(T));
+    }
+
+    pub inline fn value(self: Self) u32 {
+        return @backingInt(self);
+    }
+};
+
+pub inline fn typeId(comptime T: type) TypeId {
+    // By using the raw T as the tag, it makes it easier to obtain an ID value using uniqueId.
+    // I don't know if this is a behavior that is desireable. It might be better to give typeID
+    // its own ID generator.
+    return comptime TypeId.of(T);
 }
 
 pub fn GenericOpaqueSeal(comptime outer_tag: anytype)

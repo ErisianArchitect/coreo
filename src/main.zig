@@ -9,6 +9,7 @@ const comp = coreo.comp;
 const typing = comp.typing;
 const debug = coreo.debug;
 const ffi = coreo.ffi;
+const str = coreo.str;
 
 const print = debug.print;
 const println = debug.println;
@@ -37,9 +38,22 @@ const Alloc = std.mem.Allocator;
 const TypeMap = coreo.dsa.TypeMapUnmanaged;
 const String = coreo.str.string.StringManaged;
 
+fn foo(input: []const u8) void {
+    println("{s}", .{input});
+}
+
+const State = enum(usize) {
+    unlocked,
+    locked,
+    _,
+};
+
 pub fn main(init: std.process.Init) !void {
+    const state: State = @fromBackingInt(420);
+    println("{d}", .{@intFromEnum(state)});
+    println("Size of enum{{unk}}: {d}", .{@sizeOf(enum{unk})});
+
     @setEvalBranchQuota(std.math.maxInt(u32));
-    
     const gpa = init.gpa;
     var map = TypeMap([]const u8).empty;
     defer map.map.deinit(gpa);

@@ -39,35 +39,35 @@ pub fn TypeMapUnmanaged(comptime T: type) type {
             return comptime comp.typing.uniqueId(Key);
         }
 
-        pub inline fn get(self: Self, comptime Key: type) ?T {
+        pub fn get(self: Self, comptime Key: type) ?T {
             return self.map.get(keyFor(Key));
         }
 
-        pub inline fn getRef(self: Self, comptime Key: type) ?*const T {
+        pub fn getRef(self: Self, comptime Key: type) ?*const T {
             return self.map.getPtr(keyFor(Key));
         }
 
-        pub inline fn getMut(self: Self, comptime Key: type) ?*T {
+        pub fn getMut(self: Self, comptime Key: type) ?*T {
             return self.map.getPtr(keyFor(Key));
         }
 
-        pub inline fn contains(self: Self, comptime Key: type) bool {
+        pub fn contains(self: Self, comptime Key: type) bool {
             return self.map.contains(keyFor(Key));
         }
 
-        pub inline fn insert(self: *Self, alloc: Alloc, comptime Key: type, value: T) !void {
+        pub fn insert(self: *Self, alloc: Alloc, comptime Key: type, value: T) !void {
             try self.map.put(alloc, keyFor(Key), value);
         }
 
-        pub inline fn fetchInsert(self: *Self, alloc: Alloc, comptime Key: type, value: T) !?T {
+        pub fn fetchInsert(self: *Self, alloc: Alloc, comptime Key: type, value: T) !?T {
             return if (try self.map.fetchPut(alloc, keyFor(Key), value)) |kv| kv.value else null;
         }
 
-        pub inline fn remove(self: *Self, comptime Key: type) !bool {
+        pub fn remove(self: *Self, comptime Key: type) !bool {
             return self.map.remove(keyFor(Key));
         }
 
-        pub inline fn fetchRemove(self: *Self, comptime Key: type) ?T {
+        pub fn fetchRemove(self: *Self, comptime Key: type) ?T {
             return if(self.map.fetchRemove(keyFor(Key))) |kv| kv.value else null;
         }
     };

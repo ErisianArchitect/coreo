@@ -189,19 +189,11 @@ pub fn ObjectPoolUnmanaged(comptime T: type) type {
         }
 
         pub fn getRef(self: *const Self, id: Id) ObjectPoolError!*const T {
-            // const pool_index = self.index.ptr[id.id];
-            // const pool_id = self.pool_ids[pool_index];
-            // if (pool_id != id) return ObjectPoolError.IdMismatch;
-            // return &self.pool.ptr[pool_index];
-            return self.getInternal(id);
+            return getInternal(self, id);
         }
 
         pub fn getMut(self: *Self, id: Id) ObjectPoolError!*T {
-            // const pool_index = self.index.ptr[id.id];
-            // const pool_id = self.pool_ids[pool_index];
-            // if (pool_id != id) return ObjectPoolError.IdMismatch;
-            // return &self.pool.ptr[pool_index];
-            return self.getInternal(id);
+            return getInternal(self, id);
         }
 
         pub fn push(self: *Self, alloc: Allocator, value: T) Id {

@@ -282,6 +282,14 @@ pub fn dedup(comptime T: type, comptime arr: anytype) [uniqueCount(arr)]T {
     return items.items;
 }
 
-pub inline fn inlineCall(comptime func: anytype, args: anytype) typing.FnReturn(func) {
+pub inline fn autoCall(comptime func: anytype, args: anytype) typing.FnReturn(@TypeOf(func)) {
+    return @call(.auto, func, args);
+}
+
+pub inline fn noInlineCall(comptime func: anytype, args: anytype) typing.FnReturn(@TypeOf(func)) {
+    return @call(.never_inline, func, args);
+}
+
+pub inline fn inlineCall(comptime func: anytype, args: anytype) typing.FnReturn(@TypeOf(func)) {
     return @call(.always_inline, func, args);
 }
