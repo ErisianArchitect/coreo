@@ -80,6 +80,21 @@ pub fn Unique(comptime tag: anytype) type {
     }.@"$T"(tag);
 }
 
+// This is a bit of a hack, and is dependent on the compiler version.
+// COMPILER(VERSION): '0.17.0'
+pub fn UniqueType(comptime T: type) type {
+    return struct {
+        const TYPE = opaque {
+            const _TAG = T;
+        };
+        pub fn @"$T"(comptime Inner: type) type {
+            return struct {
+                const _TAG = Inner;
+            };
+        }
+    }.@"$T"(T);
+}
+
 inline fn isDigit(chr: u8) bool {
     return chr >= '0' and chr <= '9';
 }
@@ -136,10 +151,24 @@ pub const TypeId = enum(u32) {
 };
 
 pub inline fn typeId(comptime T: type) TypeId {
-    // By using the raw T as the tag, it makes it easier to obtain an ID value using uniqueId.
-    // I don't know if this is a behavior that is desireable. It might be better to give typeID
-    // its own ID generator.
-    return comptime TypeId.of(T);
+    return comptime ret: {
+        const name = @typeName(UniqueType(T));
+        const prefix_len: usize = blk: {
+            for (0.., name) |i, c| {
+                if (isDigit(c)) break :blk i;
+            } else @compileError("Failed to find first digit.");
+        };
+        const suffix = name[prefix_len..];
+        const suffix_len: usize = blk: {
+            for (0.., suffix) |i, c| {
+                if (!isDigit(c)) break :blk i;
+            } else break :blk suffix.len;
+        };
+        const digits = suffix[0..suffix_len];
+        const id_raw: u32 = std.fmt.parseInt(u32, digits, 10) catch @compileError("Failed to parse int.");
+        // Add 1 to id_raw to ensure non-zero value.
+        break :ret TypeId.init(id_raw + 1);
+    };
 }
 
 pub fn GenericOpaqueSeal(comptime outer_tag: anytype)
