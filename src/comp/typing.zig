@@ -130,6 +130,21 @@ pub inline fn uniqueId(comptime tag: anytype) u32 {
     return comptime SUB_ID + 1;
 }
 
+// This is a bit of a hack, and is dependent on the compiler version.
+// COMPILER(VERSION): '0.17.0'
+fn TypeIdUniqueType(comptime T: type) type {
+    return struct {
+        const TYPE = opaque {
+            const _TAG = T;
+        };
+        pub fn @"$T"(comptime Inner: type) type {
+            return struct {
+                const _TAG = Inner;
+            };
+        }
+    }.@"$T"(T);
+}
+
 pub const TypeId = enum(u32) {
     const Self = @This();
     
@@ -153,7 +168,7 @@ pub const TypeId = enum(u32) {
 
     pub inline fn of(comptime T: type) Self {
         return comptime ret: {
-            const name = @typeName(UniqueType(T));
+            const name = @typeName(TypeIdUniqueType(T));
             const prefix_len: usize = blk: {
                 for (0.., name) |i, c| {
                     if (isDigit(c)) break :blk i;
