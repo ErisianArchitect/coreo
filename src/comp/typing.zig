@@ -142,7 +142,7 @@ pub const TypeId = enum(u32) {
     }
 
     pub inline fn of(comptime T: type) Self {
-        return comptime .init(uniqueId(T));
+        return comptime typeId(T);
     }
 
     pub inline fn value(self: Self) u32 {
