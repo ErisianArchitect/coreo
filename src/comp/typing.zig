@@ -136,13 +136,40 @@ pub const TypeId = enum(u32) {
     null = 0,
     _,
 
+    pub const HashContext = struct {
+        pub fn hash(_: HashContext, key: TypeId) u64 {
+            return key.hash64();
+        }
+
+        pub fn eql(_: HashContext, lhs: TypeId, rhs: TypeId) bool {
+            return lhs == rhs;
+        }
+    };
+
     pub inline fn init(val: u32) Self {
         @setRuntimeSafety(false);
         return @fromBackingInt(val);
     }
 
     pub inline fn of(comptime T: type) Self {
-        return comptime typeId(T);
+        return comptime ret: {
+            const name = @typeName(UniqueType(T));
+            const prefix_len: usize = blk: {
+                for (0.., name) |i, c| {
+                    if (isDigit(c)) break :blk i;
+                } else @compileError("Failed to find first digit.");
+            };
+            const suffix = name[prefix_len..];
+            const suffix_len: usize = blk: {
+                for (0.., suffix) |i, c| {
+                    if (!isDigit(c)) break :blk i;
+                } else break :blk suffix.len;
+            };
+            const digits = suffix[0..suffix_len];
+            const id_raw: u32 = std.fmt.parseInt(u32, digits, 10) catch @compileError("Failed to parse int.");
+            // Add 1 to id_raw to ensure non-zero value.
+            break :ret TypeId.init(id_raw + 1);
+        };
     }
 
     pub inline fn value(self: Self) u32 {
@@ -162,31 +189,10 @@ pub const TypeId = enum(u32) {
         std.hash.autoHash(&hasher, self);
         return hasher.final();
     }
-
-    pub inline fn eql(self: Self, other: Self) bool {
-        return self == other;
-    }
 };
 
 pub inline fn typeId(comptime T: type) TypeId {
-    return comptime ret: {
-        const name = @typeName(UniqueType(T));
-        const prefix_len: usize = blk: {
-            for (0.., name) |i, c| {
-                if (isDigit(c)) break :blk i;
-            } else @compileError("Failed to find first digit.");
-        };
-        const suffix = name[prefix_len..];
-        const suffix_len: usize = blk: {
-            for (0.., suffix) |i, c| {
-                if (!isDigit(c)) break :blk i;
-            } else break :blk suffix.len;
-        };
-        const digits = suffix[0..suffix_len];
-        const id_raw: u32 = std.fmt.parseInt(u32, digits, 10) catch @compileError("Failed to parse int.");
-        // Add 1 to id_raw to ensure non-zero value.
-        break :ret TypeId.init(id_raw + 1);
-    };
+    return comptime TypeId.of(T);
 }
 
 pub fn GenericOpaqueSeal(comptime outer_tag: anytype)
