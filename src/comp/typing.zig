@@ -148,6 +148,24 @@ pub const TypeId = enum(u32) {
     pub inline fn value(self: Self) u32 {
         return @backingInt(self);
     }
+
+    pub fn hash64(self: Self) u64 {
+        const SEED: u64 = comptime 8072947542518565804;
+        var hasher = std.hash.XxHash64.init(SEED);
+        std.hash.autoHash(&hasher, self);
+        return hasher.final();
+    }
+
+    pub fn hash32(self: Self) u32 {
+        const SEED: u64 = comptime 3276423977;
+        var hasher = std.hash.XxHash32.init(SEED);
+        std.hash.autoHash(&hasher, self);
+        return hasher.final();
+    }
+
+    pub inline fn eql(self: Self, other: Self) bool {
+        return self == other;
+    }
 };
 
 pub inline fn typeId(comptime T: type) TypeId {
@@ -197,5 +215,5 @@ pub inline fn anyHash(comptime tag: anytype) u64 {
 }
 
 pub inline fn typeHash(comptime T: type) u64 {
-    return comptime anyHash(T);
+    return comptime TypeId.of(T).hash64();
 }
