@@ -6,6 +6,7 @@ const VecUnmanaged = coreo.dsa.VecUnmanaged;
 const VecManaged = coreo.dsa.VecManaged;
 
 const comp = coreo.comp;
+const interface = comp.interface;
 const typing = comp.typing;
 const debug = coreo.debug;
 const ffi = coreo.ffi;
@@ -48,56 +49,40 @@ const State = enum(usize) {
     _,
 };
 
-pub fn main(init: std.process.Init) !void {
-    const state: State = @fromBackingInt(420);
-    println("{d}", .{@intFromEnum(state)});
-    println("Size of enum{{unk}}: {d}", .{@sizeOf(enum{unk})});
+pub const VTableTest = struct {
+    const Self = @This();
 
-    @setEvalBranchQuota(std.math.maxInt(u32));
-    const gpa = init.gpa;
-    var map = TypeMap([]const u8).empty;
-    defer map.map.deinit(gpa);
+    ptr: *anyopaque,
+    vtable: interface.VTable(struct {
+        foo: *const fn(self: *anyopaque) void,
+    }),
 
-    var buf = String.init(gpa);
-    defer buf.deinit();
-
-    try buf.pushStr("The quick brown fox jumps over the lazy dog.");
-    try buf.push('\n');
-    try buf.pushStr("Line two.");
-
-    println("{f}", .{buf});
-
-    println("Hash for u32: {d}", .{comp.typing.typeHash(u32)});
-
-    // map.insert(gpa, u32, "Type(u32)") catch @panic("Failure");
-    // map.insert(gpa, u64, "Type(u64)") catch @panic("Failure");
-
-    // println("Contains u32: {}", .{map.contains(u32)});
-    // println("Contains u64: {}", .{map.contains(u64)});
-    // println("Contains u16: {}", .{map.contains(u16)});
-    // println("Value of u32: {s}", .{map.get(u32).?});
-    // println("Value of u64: {s}", .{map.get(u64).?});
-
-    const ids: []const u32 = ManyIds(256);
-
-    for (ids) |id| {
-        if (map.map.contains(id)) @panic("Key collision.");
-        try map.map.put(gpa, id, "");
+    pub fn init(ptr: anytype) Self {
+        const Child = typing.PointerChild(@TypeOf(ptr));
+        return .{
+            .ptr = ptr,
+            .vtable = .of(Child),
+        };
     }
 
-    qprintln(comp.typing.uniqueId(u32));
-    qprintln(comp.typing.uniqueId(u64));
-    qprintln(comp.typing.uniqueName(u32));
-    qprintln(comp.typing.uniqueName(u64));
+    pub fn foo(self: Self) void {
+        self.vtable.ptr.foo(self.ptr);
+    }
+};
 
-    // const id: usize = comp.typing.uniqueId(FredA);
-    // println("Name: {s}", .{@typeName(FredA)});
-    // println("Name: {s}", .{@typeName(FredB)});
-    // println("Id: {d}", .{id});
-    // println("Id: {d}", .{comp.typing.uniqueId(FredB)});
-    // inline for (comptime 0..1000) |i| {
-    //     println("Id({d}): {d}", .{i, comp.typing.uniqueId(i)});
-    // }
+pub const FooFighter = struct {
+    name: []const u8,
+    
+    pub fn foo(self: *@This()) void {
+        println("Name: {s}", .{self.name});
+    }
+};
+
+pub fn main(init: std.process.Init) !void {
+    _=init;
+    var fighter = FooFighter{.name = "Fred"};
+    const erased = VTableTest.init(&fighter);
+    erased.foo();
 }
 
 pub fn ManyIds(comptime count: usize) []const u32 {

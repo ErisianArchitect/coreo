@@ -1,6 +1,8 @@
 
 const std = @import("std");
 
+const comp = @import("root.zig");
+
 const lang = std.lang;
 
 const ContainerLayout = lang.Type.ContainerLayout;
@@ -11,6 +13,70 @@ pub fn fieldCount(comptime T: type) comptime_int {
 
 pub fn paramCount(comptime F: type) comptime_int {
     return comptime @typeInfo(F).@"fn".param_types.len;
+}
+
+pub fn paramTypes(comptime F: type) []const ?type {
+    return comptime @typeInfo(F).@"fn".param_types;
+}
+
+pub fn isConcreteFn(comptime F: type) bool {
+    const fun = @typeInfo(F).@"fn";
+    if (fun.attrs.varargs) return false;
+    if (fun.is_generic) return false;
+    if (fun.return_type == null) return false;
+    for (fun.param_types) |param_type| {
+        if (param_type == null) return false;
+    }
+    return true;
+}
+
+pub fn concreteParamTypes(comptime F: type) []const type {
+    return comptime ret:{
+        const fun = @typeInfo(F).@"fn";
+        var types: [fun.param_types.len]type = undefined;
+        @setEvalBranchQuota(1000 + fun.param_types.len * 100);
+        for (0.., fun.param_types) |i, param_type| {
+            if (param_type == null) @compileError("Must have all concrete parameter types.");
+            types[i] = param_type.?;
+        }
+        break:ret comp.internArray(type, types);
+    };
+}
+
+pub fn fnInfo(comptime F: type) std.builtin.Type.Fn {
+    return @typeInfo(F).@"fn";
+}
+
+pub fn ptrInfo(comptime P: type) std.builtin.Type.Pointer {
+    return @typeInfo(P).pointer;
+}
+
+pub fn fnPtrInfo(comptime F: type) std.builtin.Type.Fn {
+    return fnInfo(ptrInfo(F).child);
+}
+
+pub fn optInfo(comptime O: type) std.builtin.Type.Optional {
+    return @typeInfo(O).optional;
+}
+
+pub fn arrInfo(comptime A: type) std.builtin.Type.Array {
+    return @typeInfo(A).array;
+}
+
+pub fn enumInfo(comptime E: type) std.builtin.Type.Enum {
+    return @typeInfo(E).@"enum";
+}
+
+pub fn structInfo(comptime S: type) std.builtin.Type.Struct {
+    return @typeInfo(S).@"struct";
+}
+
+pub fn opaqueInfo(comptime O: type) std.builtin.Type.Opaque {
+    return @typeInfo(O).@"opaque";
+}
+
+pub fn unionInfo(comptime U: type) std.builtin.Type.Union {
+    return @typeInfo(U).@"union";
 }
 
 pub fn FnReturn(comptime F: type) type {
