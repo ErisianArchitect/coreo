@@ -6,7 +6,7 @@ const dsa = @import("dsa");
 
 const typemap = @import("typemap.zig");
 pub const typing = @import("typing.zig");
-pub const interface = @import("interface2.zig");
+// pub const interface = @import("interface2.zig");
 
 comptime {
     @import("debug").checking.checkAllDecls(
@@ -14,7 +14,7 @@ comptime {
         &.{
             typemap,
             typing,
-            interface,
+            // interface,
         },
     );
 }
