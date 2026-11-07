@@ -39,15 +39,15 @@ fn vtInfo(comptime VTableT: type) VTInfo {
     };
 }
 
-ignore_this_error_for_design;
+// ignore_this_error_for_design;
 
 pub const Fred = extern struct {
 
     ptr: *anyopaque,
     vtable: *const struct {
-        foo: *const fn(self: Fred) void,
-        bar: *const fn(self: Fred) void,
-        baz: *const fn(self: Fred) void,
+        foo: *const fn(self: *anyopaque) void,
+        bar: *const fn(self: *anyopaque) void,
+        baz: *const fn(self: *anyopaque) void,
     };
 
     pub const init = createVTableInit(@This());
