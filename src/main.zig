@@ -1,3 +1,9 @@
+pub fn main(init: std.process.Init) !void {
+    _=init;
+}
+
+const info = @import("INFO").info;
+
 const std = @import("std");
 const coreo = @import("coreo");
 
@@ -6,7 +12,7 @@ const VecUnmanaged = coreo.dsa.VecUnmanaged;
 const VecManaged = coreo.dsa.VecManaged;
 
 const comp = coreo.comp;
-const interface = comp.interface;
+// const interface = comp.interface;
 const typing = comp.typing;
 const debug = coreo.debug;
 const ffi = coreo.ffi;
@@ -48,42 +54,6 @@ const State = enum(usize) {
     locked,
     _,
 };
-
-pub const VTableTest = struct {
-    const Self = @This();
-
-    ptr: *anyopaque,
-    vtable: interface.VTable(struct {
-        foo: *const fn(self: *anyopaque) void,
-    }),
-
-    pub fn init(ptr: anytype) Self {
-        const Child = typing.PointerChild(@TypeOf(ptr));
-        return .{
-            .ptr = ptr,
-            .vtable = .of(Child),
-        };
-    }
-
-    pub fn foo(self: Self) void {
-        self.vtable.ptr.foo(self.ptr);
-    }
-};
-
-pub const FooFighter = struct {
-    name: []const u8,
-    
-    pub fn foo(self: *@This()) void {
-        println("Name: {s}", .{self.name});
-    }
-};
-
-pub fn main(init: std.process.Init) !void {
-    _=init;
-    var fighter = FooFighter{.name = "Fred"};
-    const erased = VTableTest.init(&fighter);
-    erased.foo();
-}
 
 pub fn ManyIds(comptime count: usize) []const u32 {
     return comptime blk: {

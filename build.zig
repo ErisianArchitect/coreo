@@ -8,6 +8,14 @@ const Module = project.Module;
 const Project = project.Project;
 const CheckImports = project.BuildCheckImports;
 
+const Info = struct {
+    name: []const u8,
+    version: []const u8,
+    authors: []const []const u8 = &.{},
+    repo: ?[]const u8 = null,
+    homepage: ?[]const u8 = null,
+};
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -65,6 +73,19 @@ pub fn build(b: *std.Build) void {
     check_options.addOption([]const u8, "REPO", "https://github.com/ErisianArchitect/coreo");
 
     imports.addOptions("CFG", build_options, check_options);
+
+    const common_options = b.addOptions();
+
+    common_options.addOption(Info, "info", Info{
+        .name = "coreo",
+        .version = "0.1.0",
+        .repo = "https://github.com/ErisianArchitect/coreo",
+        .authors = &.{"Ada F. <https://github.com/ErisianArchitect>"},
+    });
+    const common_opts_mod = common_options.createModule();
+
+    imports.build.connectOneWay(.{.name = "INFO", .module = common_opts_mod});
+    imports.check.connectOneWay(.{.name = "INFO", .module = common_opts_mod});
     
     const main_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
