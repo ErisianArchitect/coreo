@@ -5,6 +5,7 @@ pub const comp = @import("comp");
 pub const debug = @import("debug");
 pub const ffi = @import("ffi");
 pub const str = @import("str");
+pub const hash = @import("hash");
 
 comptime {
     @import("debug").checking.checkAllDecls(
