@@ -64,6 +64,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }));
 
+    imports.connectDuped("hash", proj.dupedCreateModule(2, .{
+        .root_source_file = b.path("src/hash.zig"),
+        .target = target,
+        .optimize = optimize,
+    }));
+
     const build_options = b.addOptions();
     const check_options = b.addOptions();
 
