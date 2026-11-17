@@ -107,6 +107,6 @@ pub const BitsetUnmanaged = extern struct {
     }
 
     pub fn clear(self: *Self) void {
-        @memset(&self.masks, 0);
+        @memset(self.masks, 0);
     }
 };
