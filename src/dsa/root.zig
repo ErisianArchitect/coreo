@@ -7,6 +7,7 @@ const gen_id = @import("gen_id.zig");
 const object_pool = @import("object_pool.zig");
 const slot_map = @import("slot_map.zig");
 const type_map = @import("type_map.zig");
+const bitset = @import("bitset.zig");
 
 comptime {
     @import("debug").checking.checkAllDecls(
@@ -26,6 +27,8 @@ pub const VecUnmanaged = vec.VecUnmanaged;
 pub const VecManaged = vec.VecManaged;
 pub const StackVec = stack_vec.StackVec;
 pub const TypeMapUnmanaged = type_map.TypeMapUnmanaged;
+pub const Bitmask = bitset.Bitmask;
+pub const Bitset = bitset.Bitset;
 
 pub const GenId = gen_id.GenId;
 pub const ObjectPoolError = object_pool.ObjectPoolError;
