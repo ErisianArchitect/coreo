@@ -552,16 +552,16 @@ pub const SimpleProject = struct {
             .optimize = .debug,
         };
 
-        var build_root_module: *Module = undefined;
-        proj.connectRelease(self.info.name, &build_root_module, build_root_create_options);
-        
+        const build_root_module: *Module = b.createModule(build_root_create_options);
+        const check_root_module: *Module = b.createModule(check_root_create_options);
+
         const check_suffix: []const u8 = "_check";
         const check_root_name: []u8 = b.allocator.alloc(u8, self.info.name.len + check_suffix.len) catch @panic("Out of memory.");
         @memcpy(check_root_name[0..self.info.name.len], self.info.name);
         @memcpy(check_root_name[self.info.name.len..], check_suffix);
-
-        var check_root_module: *Module = undefined;
-        proj.connectCheck(check_root_name, &check_root_module, check_root_create_options);
+        
+        proj.release_imports.connect(self.info.name, build_root_module);
+        proj.check_imports.connect(check_root_name, check_root_module);
 
         for (self.modules) |module| {
             const build_mod_create_opts: Module.CreateOptions = .{
