@@ -1,16 +1,16 @@
 
 const std = @import("std");
-const CFG = @import("CFG");
+const COMPILE = @import("COMPILE");
 
-const dsa = @import("dsa");
+const dsa = @import("root").dsa;
 
 const typemap = @import("typemap.zig");
 pub const typing = @import("typing.zig");
 // pub const interface = @import("interface2.zig");
 
 comptime {
-    @import("debug").checking.checkAllDecls(
-        @import("CFG").CHECK,
+    @import("root").debug.checking.checkAllDecls(
+        @import("COMPILE").checking,
         &.{
             typemap,
             typing,

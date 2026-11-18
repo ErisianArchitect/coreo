@@ -1,6 +1,6 @@
 
 const std = @import("std");
-const comp = @import("comp");
+const comp = @import("root").comp;
 
 const PrivateToken = struct{};
 

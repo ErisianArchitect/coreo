@@ -10,8 +10,8 @@ const type_map = @import("type_map.zig");
 const bitset = @import("bitset.zig");
 
 comptime {
-    @import("debug").checking.checkAllDecls(
-        @import("CFG").CHECK,
+    @import("root").debug.checking.checkAllDecls(
+        @import("COMPILE").checking,
         &.{
             vec,
             stack_vec,

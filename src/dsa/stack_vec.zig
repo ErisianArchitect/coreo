@@ -1,7 +1,7 @@
 
 const std = @import("std");
 
-const debug = @import("debug");
+const debug = @import("root").debug;
 
 const outOfBounds = debug.assert.failure("Out of bounds");
 const bufferOverflow = debug.assert.failure("Buffer overflow");

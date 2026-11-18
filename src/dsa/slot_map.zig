@@ -1,11 +1,11 @@
 
 const std = @import("std");
 
-const comp = @import("comp");
+const comp = @import("root").comp;
+const dsa = @import("root").dsa;
 
 const Allocator = std.mem.Allocator;
-
-const GenId = @import("dsa").GenId;
+const GenId = dsa.GenId;
 
 
 

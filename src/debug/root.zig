@@ -2,15 +2,15 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const comp = @import("comp");
-const str = @import("str");
+const comp = @import("root").comp;
+const str = @import("root").str;
 
 pub const checking = @import("checking.zig");
 pub const assert = @import("assert.zig");
 
 comptime {
-    @import("debug").checking.checkAllDecls(
-        @import("CFG").CHECK,
+    @import("root").debug.checking.checkAllDecls(
+        @import("COMPILE").checking,
         &.{
             checking,
             assert,

@@ -1,11 +1,11 @@
 
 const std = @import("std");
 const builtin = @import("builtin");
-const CFG = @import("CFG");
+const COMPILE = @import("COMPILE");
 
-const comp = @import("comp");
-const dsa = @import("dsa");
-const debug = @import("debug");
+const comp = @import("root").comp;
+const dsa = @import("root").dsa;
+const debug = @import("root").debug;
 
 const StackVec = dsa.StackVec;
 
@@ -15,7 +15,7 @@ const Allocator = std.mem.Allocator;
 
 
 comptime { // Checking.
-    if (CFG.CHECK) {
+    if (COMPILE.checking) {
         const vec_decls = std.meta.declarations(VecUnmanaged(void));
         var missing = StackVec([]const u8, vec_decls.len).init();
         for (vec_decls) |name| {

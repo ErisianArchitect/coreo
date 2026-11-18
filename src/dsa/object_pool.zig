@@ -1,12 +1,12 @@
 
 const std = @import("std");
 
-const comp = @import("comp");
-const debug = @import("debug");
+const comp = @import("root").comp;
+const debug = @import("root").debug;
+const dsa = @import("root").dsa;
 
 const Allocator = std.mem.Allocator;
 
-const dsa = @import("dsa");
 
 const Vec = dsa.VecUnmanaged;
 const GenId = dsa.GenId;

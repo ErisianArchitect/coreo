@@ -1,9 +1,9 @@
 
 const std = @import("std");
-const CFG = @import("CFG");
+const COMPILE = @import("COMPILE");
 
-const comp = @import("comp");
-const dsa = @import("dsa");
+const comp = @import("root").comp;
+const dsa = @import("root").dsa;
 const StackVec = dsa.StackVec;
 
 pub fn checkAllDecls(comptime check: bool, comptime types: []const type) void {comptime {

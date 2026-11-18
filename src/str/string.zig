@@ -1,12 +1,12 @@
 
 const std = @import("std");
-const CFG = @import("CFG");
+const COMPILE = @import("COMPILE");
 
 const Alloc = std.mem.Allocator;
 
 comptime {
-    const checking = @import("debug").checking;
-    checking.checkInterface(CFG.CHECK, StringUnmanaged, StringManaged);
+    const checking = @import("root").debug.checking;
+    checking.checkInterface(COMPILE.checking, StringUnmanaged, StringManaged);
 }
 
 pub const StringUnmanaged = struct {

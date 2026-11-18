@@ -308,3 +308,51 @@ pub inline fn anyHash(comptime tag: anytype) u64 {
 pub inline fn typeHash(comptime T: type) u64 {
     return comptime TypeId.of(T).hash64();
 }
+
+/// A type that can be used as a field to set the alignment of a type.
+/// This is not strictly necessary, you can just use the `align` keyword
+/// on your first field, but this can be useful if you want to have a
+/// field that is specifically used to force alignment without using the
+/// `align` keyword.
+///
+/// This type takes up no memory, it only sets the alignment.
+///
+/// Use this as the first field in an extern struct.
+///
+/// ```zig
+/// const Foo = extern struct {
+///     _: Aligner(32),
+///     bytes: [32]u8,
+/// };
+/// ```
+pub fn Aligner(comptime alignment: usize) type {
+    if (@popCount(alignment) != 1) @compileError("Alignment must be a non-zero power of two.");
+    return extern struct {
+        const Self = @This();
+        pub const ALIGNMENT: usize = alignment;
+
+        _: void align(alignment) = {},
+
+        pub const def: Self = .{._ = {}};
+    };
+}
+
+/// A type that can be used to add padding to a type.
+///
+/// ```zig
+/// const Foo = packed struct {
+///     byte: u8,
+///     _pad0: Padding(3) = .def,
+///     aligned: u32,
+/// };
+/// ```
+pub fn Padding(comptime size: usize) type {
+    return extern struct {
+        const Self = @This();
+        pub const SIZE: usize = size;
+        
+        _: [size]u8 = @splat(0),
+
+        pub const def: Self = std.mem.zeroes(Self);
+    };
+}

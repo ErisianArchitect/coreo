@@ -1,15 +1,15 @@
 const std = @import("std");
 
-pub const dsa = @import("dsa");
-pub const comp = @import("comp");
-pub const debug = @import("debug");
-pub const ffi = @import("ffi");
-pub const str = @import("str");
-pub const hash = @import("hash");
+pub const dsa = @import("dsa/root.zig");
+pub const comp = @import("comp/root.zig");
+pub const debug = @import("debug/root.zig");
+pub const ffi = @import("ffi/root.zig");
+pub const str = @import("str/root.zig");
+pub const hash = @import("hash.zig");
 
 comptime {
-    @import("debug").checking.checkAllDecls(
-        @import("CFG").CHECK,
+    debug.checking.checkAllDecls(
+        @import("COMPILE").checking,
         &.{
             dsa,
             comp,

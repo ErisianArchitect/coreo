@@ -1,10 +1,10 @@
 
 const std = @import("std");
 
-const debug = @import("debug");
-const comp = @import("comp");
+const debug = @import("root").debug;
+const comp = @import("root").comp;
 
-const CFG = @import("CFG");
+const COMPILE = @import("COMPILE");
 
 const Alloc = std.mem.Allocator;
 const HashMap = std.HashMapUnmanaged;

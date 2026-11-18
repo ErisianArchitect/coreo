@@ -1,15 +1,15 @@
 
 const std = @import("std");
 
-const CFG = @import("CFG");
+const COMPILE = @import("COMPILE");
 
-const checking = @import("debug").checking;
+const checking = @import("root").debug.checking;
 
 pub const string = @import("string.zig");
 
 comptime {
     checking.checkAllDecls(
-        CFG.CHECK,
+        COMPILE.checking,
         &.{
             string,
         },
