@@ -189,6 +189,7 @@ pub const ProjectImports = struct {
 
     pub fn connectAdv(self: *Self, comptime connection_type: ConnectionType, name: []const u8, module: *Module) void {
         if (self.isFull()) @panic("Ran out of room. Allocate a greater capacity, this is not dynamic.");
+        module.addImport(name, module);
         for (self.importsSlice(), self.connectionsSlice()) |import, conn| {
             if (conn == .OneWay) continue;
             switch (comptime connection_type) {
@@ -198,7 +199,6 @@ pub const ProjectImports = struct {
                 .TwoWay => {
                     import.module.addImport(name, module);
                     module.addImport(import.name, import.module);
-                    module.addImport(name, module);
                 },
             }
         }
