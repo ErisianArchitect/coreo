@@ -3,9 +3,9 @@ const std = @import("std");
 const builtin = @import("builtin");
 const COMPILE = @import("COMPILE");
 
-const comp = @import("root").comp;
-const dsa = @import("root").dsa;
-const debug = @import("root").debug;
+const comp = @import("coreo").comp;
+const dsa = @import("coreo").dsa;
+const debug = @import("coreo").debug;
 
 const StackVec = dsa.StackVec;
 

@@ -3,7 +3,7 @@ const std = @import("std");
 
 const COMPILE = @import("COMPILE");
 
-const checking = @import("root").debug.checking;
+const checking = @import("coreo").debug.checking;
 
 pub const string = @import("string.zig");
 

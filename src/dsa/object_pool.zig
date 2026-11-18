@@ -1,9 +1,9 @@
 
 const std = @import("std");
 
-const comp = @import("root").comp;
-const debug = @import("root").debug;
-const dsa = @import("root").dsa;
+const comp = @import("coreo").comp;
+const debug = @import("coreo").debug;
+const dsa = @import("coreo").dsa;
 
 const Allocator = std.mem.Allocator;
 

@@ -2,14 +2,14 @@
 const std = @import("std");
 const COMPILE = @import("COMPILE");
 
-const dsa = @import("root").dsa;
+const dsa = @import("coreo").dsa;
 
 const typemap = @import("typemap.zig");
 pub const typing = @import("typing.zig");
 // pub const interface = @import("interface2.zig");
 
 comptime {
-    @import("root").debug.checking.checkAllDecls(
+    @import("coreo").debug.checking.checkAllDecls(
         @import("COMPILE").checking,
         &.{
             typemap,

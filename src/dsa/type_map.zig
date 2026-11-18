@@ -1,8 +1,8 @@
 
 const std = @import("std");
 
-const debug = @import("root").debug;
-const comp = @import("root").comp;
+const debug = @import("coreo").debug;
+const comp = @import("coreo").comp;
 
 const COMPILE = @import("COMPILE");
 

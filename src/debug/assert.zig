@@ -2,7 +2,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const debug = @import("root").debug;
+const debug = @import("coreo").debug;
 
 /// Optionally provide a source location and a message.
 pub const FailureInput = struct {

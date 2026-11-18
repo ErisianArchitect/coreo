@@ -10,7 +10,7 @@ const type_map = @import("type_map.zig");
 const bitset = @import("bitset.zig");
 
 comptime {
-    @import("root").debug.checking.checkAllDecls(
+    @import("coreo").debug.checking.checkAllDecls(
         @import("COMPILE").checking,
         &.{
             vec,

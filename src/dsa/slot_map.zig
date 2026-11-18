@@ -1,8 +1,8 @@
 
 const std = @import("std");
 
-const comp = @import("root").comp;
-const dsa = @import("root").dsa;
+const comp = @import("coreo").comp;
+const dsa = @import("coreo").dsa;
 
 const Allocator = std.mem.Allocator;
 const GenId = dsa.GenId;

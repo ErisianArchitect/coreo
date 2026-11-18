@@ -5,7 +5,7 @@ const COMPILE = @import("COMPILE");
 const Alloc = std.mem.Allocator;
 
 comptime {
-    const checking = @import("root").debug.checking;
+    const checking = @import("coreo").debug.checking;
     checking.checkInterface(COMPILE.checking, StringUnmanaged, StringManaged);
 }
 

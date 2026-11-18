@@ -1,6 +1,6 @@
 
 const std = @import("std");
-const comp = @import("root").comp;
+const comp = @import("coreo").comp;
 
 const PrivateToken = struct{};
 

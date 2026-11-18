@@ -2,14 +2,14 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const comp = @import("root").comp;
-const str = @import("root").str;
+const comp = @import("coreo").comp;
+const str = @import("coreo").str;
 
 pub const checking = @import("checking.zig");
 pub const assert = @import("assert.zig");
 
 comptime {
-    @import("root").debug.checking.checkAllDecls(
+    @import("coreo").debug.checking.checkAllDecls(
         @import("COMPILE").checking,
         &.{
             checking,

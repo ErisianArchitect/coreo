@@ -1,7 +1,7 @@
 
 const std = @import("std");
 
-const debug = @import("root").debug;
+const debug = @import("coreo").debug;
 
 const outOfBounds = debug.assert.failure("Out of bounds");
 const bufferOverflow = debug.assert.failure("Buffer overflow");

@@ -2,8 +2,8 @@
 const std = @import("std");
 const COMPILE = @import("COMPILE");
 
-const comp = @import("root").comp;
-const dsa = @import("root").dsa;
+const comp = @import("coreo").comp;
+const dsa = @import("coreo").dsa;
 const StackVec = dsa.StackVec;
 
 pub fn checkAllDecls(comptime check: bool, comptime types: []const type) void {comptime {
