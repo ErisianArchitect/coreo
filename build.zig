@@ -22,6 +22,6 @@ pub fn build(_b: *std.Build) void {
             },
         },
         .root = "src/root.zig",
-        .main = "src/main.zig",
+        // .main = "src/main.zig",
     });
 }
