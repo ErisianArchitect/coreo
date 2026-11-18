@@ -552,7 +552,7 @@ pub const SimpleProject = struct {
             .optimize = .debug,
         };
 
-        const build_root_module: *Module = b.createModule(build_root_create_options);
+        const build_root_module: *Module = b.addModule(self.info.name, build_root_create_options);
         const check_root_module: *Module = b.createModule(check_root_create_options);
 
         const check_suffix: []const u8 = "_check";
